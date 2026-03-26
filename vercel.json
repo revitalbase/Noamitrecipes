@@ -1,9 +1,7 @@
-json{
+{
   "version": 2,
   "routes": [
     { "src": "/api/claude", "dest": "/api/claude.js" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
-
- 
