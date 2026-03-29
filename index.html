@@ -547,31 +547,35 @@ async function initSupabase(){
 function save(){
   const json = JSON.stringify(recipes);
   try{ localStorage.setItem(DB_KEY, json); }catch(e){}
-  // async cloud save — don't await
+  // async cloud save
   initSupabase().then(sb=>{
     if(!sb) return;
-    sb.from('recipes').upsert({id:'shared', data:json}).then(()=>{}).catch(()=>{});
+    sb.from('recipes')
+      .upsert({id:'shared', data:json, updated_at: new Date().toISOString()})
+      .then(({error})=>{ if(error) console.log('Save error:', error); })
+      .catch(e=>console.log('Save catch:', e));
   });
 }
 
 async function loadRecipes(){
+  // Always try Supabase first (cloud = source of truth)
   const sb = await initSupabase();
   if(sb){
     try{
-      const {data} = await sb.from('recipes').select('data').eq('id','shared').single();
-      if(data && data.data){
+      const {data, error} = await sb.from('recipes').select('data').eq('id','shared').single();
+      if(!error && data && data.data){
         const parsed = JSON.parse(data.data);
-        if(parsed && parsed.length > 0){
+        if(Array.isArray(parsed)){
           try{ localStorage.setItem(DB_KEY, data.data); }catch(e){}
           return parsed;
         }
       }
-    }catch(e){}
+    }catch(e){ console.log('Supabase load error:', e); }
   }
   // Fallback: localStorage
   try{
     const local = localStorage.getItem(DB_KEY);
-    if(local){ const p=JSON.parse(local); if(p&&p.length) return p; }
+    if(local){ const p=JSON.parse(local); if(Array.isArray(p)) return p; }
   }catch(e){}
   return [];
 }
