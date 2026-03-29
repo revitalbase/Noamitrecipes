@@ -557,11 +557,15 @@ function save(){
   try{ localStorage.setItem(DB_KEY, json); }catch(e){}
   // Save to Supabase (cloud = master)
   initSupabase().then(sb=>{
-    if(!sb) return;
+    if(!sb){ console.log('⚠️ No Supabase'); return; }
+    console.log('💾 Saving', recipes.length, 'recipes...');
     sb.from('recipes')
       .upsert({id:'shared', data:json, updated_at: new Date().toISOString()}, {onConflict:'id'})
-      .then(({error})=>{ if(error) console.error('☁️ Save error:', error); })
-      .catch(e=>console.error('☁️ Save failed:', e));
+      .then(({error})=>{
+        if(error) console.error('❌ Save error:', error);
+        else console.log('✅ Saved to Supabase!');
+      })
+      .catch(e=>console.error('❌ Save failed:', e));
   });
 }
 
