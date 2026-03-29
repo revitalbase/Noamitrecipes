@@ -517,6 +517,58 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
  <div class="proc-msg" id="procMsg">מחלצת מתכון...</div>
 </div>
 
+<!-- EDIT MODAL -->
+<div class="overlay" id="editModal">
+ <div class="modal" style="max-width:640px">
+  <div class="modal-hdr">
+   <button class="modal-x" onclick="closeModal('editModal')">✕</button>
+   <h2>✏️ עריכת מתכון</h2>
+   <p>ערכי את פרטי המתכון ושמרי</p>
+  </div>
+  <div class="modal-body">
+   <div class="fg"><label class="fl">📝 שם המתכון</label><input class="fi" id="editName" /></div>
+   <div class="fg"><label class="fl">🔗 לינק (YouTube / אתר)</label><input class="fi" id="editUrl" placeholder="https://..." /></div>
+   <div class="fg"><label class="fl">💬 הערות</label><textarea class="ft" id="editNotes"></textarea></div>
+   <div class="fg"><label class="fl">🛒 מצרכים</label><textarea class="ft" id="editIng" placeholder="כל מצרך בשורה חדשה..."></textarea></div>
+   <div class="fg"><label class="fl">👨‍🍳 אופן הכנה</label><textarea class="ft" id="editSteps" placeholder="כל שלב בשורה חדשה..."></textarea></div>
+   <div class="fg">
+    <label class="fl">⏱️ זמן הכנה &nbsp;|&nbsp; 🍽️ מנות</label>
+    <div style="display:flex;gap:10px"><input class="fi" id="editTime" placeholder="30 דקות" style="flex:1"/><input class="fi" id="editServ" placeholder="4 מנות" style="flex:1"/></div>
+   </div>
+   <div class="fg">
+    <label class="fl">🏷️ קטגוריה</label>
+    <div class="og" id="editCatGrid">
+     <button class="ob" onclick="pickEditCat(this,'אוכל ביתי')"><span class="e">🏠</span>אוכל ביתי</button>
+     <button class="ob" onclick="pickEditCat(this,'נשנושים')"><span class="e">🍿</span>נשנושים</button>
+     <button class="ob" onclick="pickEditCat(this,'ליד האוכל')"><span class="e">🥫</span>ליד האוכל</button>
+     <button class="ob" onclick="pickEditCat(this,'קינוחים')"><span class="e">🍰</span>קינוחים</button>
+     <button class="ob" onclick="pickEditCat(this,'אסיאתי')"><span class="e">🍜</span>אסיאתי</button>
+     <button class="ob" onclick="pickEditCat(this,'ראשונות')"><span class="e">🥗</span>ראשונות</button>
+     <button class="ob" onclick="pickEditCat(this,'עיקריות')"><span class="e">🍖</span>עיקריות</button>
+     <button class="ob" onclick="pickEditCat(this,'לחמים ומאפים')"><span class="e">🥐</span>לחמים</button>
+     <button class="ob" onclick="pickEditCat(this,'שתייה')"><span class="e">🥤</span>שתייה</button>
+     <button class="ob" onclick="pickEditCat(this,'מרקים')"><span class="e">🍲</span>מרקים</button>
+     <button class="ob" onclick="pickEditCat(this,'סלטים')"><span class="e">🥙</span>סלטים</button>
+     <button class="ob" onclick="pickEditCat(this,'ארוחת בוקר')"><span class="e">🍳</span>בוקר</button>
+     <button class="ob" onclick="pickEditCat(this,'ביס מהיר')"><span class="e">⚡</span>ביס מהיר</button>
+     <button class="ob dark" onclick="pickEditCat(this,'רוצים לנסות')" style="border-style:dashed"><span class="e">🎵</span><small>רוצים לנסות</small></button>
+    </div>
+   </div>
+   <div class="fg">
+    <label class="fl">🙋 מי העלה?</label>
+    <div class="og" style="grid-template-columns:repeat(4,1fr)" id="editAuGrid">
+     <button class="ob" onclick="pickEditAu(this,'נעם')"><span class="e">👧</span>נעם</button>
+     <button class="ob" onclick="pickEditAu(this,'עמית')"><span class="e">👩</span>עמית</button>
+     <button class="ob" onclick="pickEditAu(this,'רוי')"><span class="e">👩‍🍳</span>רוי</button>
+     <button class="ob" onclick="pickEditAu(this,'__f__')" style="border-style:dashed"><span class="e">🤝</span>חבר/ה</button>
+    </div>
+    <div id="editFriendRow" style="display:none;margin-top:9px"><input class="fi" id="editFriendIn" placeholder="מה השם?" oninput="editSelAu=this.value.trim()" /></div>
+   </div>
+   <button class="btn-save" onclick="saveEdit()">💾 שמרי שינויים</button>
+  </div>
+ </div>
+</div>
+
 <!-- VIEW MODAL -->
 <div class="overlay" id="viewModal"><div class="modal" id="viewContent"></div></div>
 
@@ -1113,6 +1165,91 @@ function saveRecipeUrl(idx){
   toast('✅ לינק נשמר!');
 }
 
+// ── EDIT ──
+let editIdx = -1, editSelCat = '', editSelAu = '';
+
+function openEdit(idx){
+  editIdx = idx;
+  const r = recipes[idx];
+  editSelCat = r.category || '';
+  editSelAu  = r.author   || '';
+
+  document.getElementById('editName').value  = r.name       || '';
+  document.getElementById('editUrl').value   = r.url        || '';
+  document.getElementById('editNotes').value = r.notes      || '';
+  document.getElementById('editIng').value   = r.ingredients|| '';
+  document.getElementById('editSteps').value = r.steps      || '';
+  document.getElementById('editTime').value  = r.prepTime   || '';
+  document.getElementById('editServ').value  = r.servings   || '';
+
+  // Select category
+  document.querySelectorAll('#editCatGrid .ob').forEach(b=>{
+    b.classList.toggle('sel', b.textContent.trim().includes(editSelCat) || editSelCat.includes(b.textContent.trim().replace(/[🏠🍿🥫🍰🍜🥗🍖🥐🥤🍲🥙🍳⚡🎵]/g,'').trim()));
+  });
+
+  // Select author
+  document.querySelectorAll('#editAuGrid .ob').forEach(b=>b.classList.remove('sel'));
+  const knownAuthors = ['נעם','עמית','רוי'];
+  if(knownAuthors.includes(editSelAu)){
+    document.querySelectorAll('#editAuGrid .ob').forEach(b=>{
+      if(b.textContent.includes(editSelAu)) b.classList.add('sel');
+    });
+    document.getElementById('editFriendRow').style.display='none';
+  } else {
+    document.getElementById('editFriendRow').style.display='block';
+    document.getElementById('editFriendIn').value = editSelAu;
+  }
+
+  closeModal('viewModal');
+  document.getElementById('editModal').classList.add('open');
+}
+
+function pickEditCat(btn, v){
+  editSelCat = v;
+  document.querySelectorAll('#editCatGrid .ob').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+function pickEditAu(btn, v){
+  document.querySelectorAll('#editAuGrid .ob').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const row = document.getElementById('editFriendRow');
+  if(v==='__f__'){ editSelAu=''; row.style.display='block'; document.getElementById('editFriendIn').focus(); }
+  else { editSelAu=v; row.style.display='none'; }
+}
+
+function saveEdit(){
+  if(editIdx < 0) return;
+  const name = document.getElementById('editName').value.trim();
+  if(!name){ toast('❗ הוסיפי שם'); return; }
+  if(!editSelCat){ toast('❗ בחרי קטגוריה'); return; }
+  if(!editSelAu){ toast('❗ בחרי מי העלה'); return; }
+
+  const r = recipes[editIdx];
+  const newUrl = document.getElementById('editUrl').value.trim();
+
+  // Update thumbnail if URL changed
+  if(newUrl && newUrl !== r.url){
+    const vid = ytId(newUrl);
+    if(vid) r.thumb = `https://i.ytimg.com/vi/${vid}/mqdefault.jpg`;
+  }
+
+  r.name        = name;
+  r.url         = newUrl;
+  r.notes       = document.getElementById('editNotes').value.trim();
+  r.ingredients = document.getElementById('editIng').value.trim();
+  r.steps       = document.getElementById('editSteps').value.trim();
+  r.prepTime    = document.getElementById('editTime').value.trim();
+  r.servings    = document.getElementById('editServ').value.trim();
+  r.category    = editSelCat;
+  r.author      = editSelAu;
+
+  save(); render();
+  closeModal('editModal');
+  toast('✅ המתכון עודכן!');
+  viewR(editIdx);
+}
+
 function filterCat(c,btn){curCat=c;document.querySelectorAll('.cats .cat-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');render();}
 function doSearch(q){curQ=q;render();}
 
@@ -1181,12 +1318,15 @@ function viewR(idx){
         </div>
         <div id="rfRow2" style="display:none;margin-top:8px"><input class="fi" id="rfName" placeholder="מה השם שלך?" style="font-size:13px;padding:9px 13px" oninput="rAu=this.value.trim()"/></div>
         <textarea class="rnote" id="rNote" placeholder="הערה קצרה (אופציונלי)..."></textarea>
-        <button class="btn-rs" onclick="saveRating(${idx})">⭐ שמרי דירוג</button>
+        <button class="btn-rs" onclick="saveRating(${r.id})">⭐ שמרי דירוג</button>
       </div>
       ${rH}
       <div class="stitle" style="margin-top:22px">📸 תמונות מהביצוע</div>
       <div class="cgrid">${phH}<label class="cpbtn"><input type="file" accept="image/*" onchange="addCooked(event,${idx})"/><span>📷</span><div>הוסיפי תמונה</div></label></div>
-      <div style="margin-top:22px"><button onclick="delR(${r.id})" style="width:100%;background:none;border:1.5px solid #ddd;border-radius:12px;padding:10px;font-family:Heebo;font-size:13px;cursor:pointer;color:#aaa;transition:.2s" onmouseover="this.style.borderColor='#C9603A';this.style.color='#C9603A'" onmouseout="this.style.borderColor='#ddd';this.style.color='#aaa'">🗑️ מחקי מתכון</button></div>
+      <div style="margin-top:22px;display:flex;gap:10px">
+        <button onclick="openEdit(${idx})" style="flex:1;background:var(--sage);color:#fff;border:none;border-radius:12px;padding:11px;font-family:Heebo;font-size:13px;font-weight:700;cursor:pointer;transition:.2s">✏️ ערכי מתכון</button>
+        <button onclick="delR(${r.id})" style="flex:1;background:none;border:1.5px solid #ddd;border-radius:12px;padding:11px;font-family:Heebo;font-size:13px;cursor:pointer;color:#aaa;transition:.2s" onmouseover="this.style.borderColor='#C9603A';this.style.color='#C9603A'" onmouseout="this.style.borderColor='#ddd';this.style.color='#aaa'">🗑️ מחקי</button>
+      </div>
     </div>`;
   document.getElementById('viewModal').classList.add('open');
 }
@@ -1214,9 +1354,11 @@ function setStar(v){tStars=v;updateStars(v);}
 function hoverStar(v){updateStars(v);}
 function resetStar(){updateStars(tStars);}
 function pickRA(btn,v){rAu=v==='__f__'?'':v;document.querySelectorAll('.rab').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');const r=document.getElementById('rfRow2');if(r)r.style.display=v==='__f__'?'block':'none';}
-function saveRating(idx){
+function saveRating(recipeId){
   if(!tStars){toast('❗ בחרי כמה כוכבים');return;}
   if(!rAu){toast('❗ בחרי מי מדרגת');return;}
+  const idx=recipes.findIndex(r=>r.id===recipeId);
+  if(idx===-1){toast('❗ מתכון לא נמצא');return;}
   const note=document.getElementById('rNote').value.trim();
   if(!recipes[idx].ratings) recipes[idx].ratings=[];
   recipes[idx].ratings.push({stars:tStars,author:rAu,note,date:new Date().toLocaleDateString('he-IL')});
