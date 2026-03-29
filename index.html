@@ -176,13 +176,9 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 
 /* rating */
 .rbox{background:var(--cream);border-radius:14px;padding:18px;margin-bottom:18px;border:1px solid var(--border);}
-.stars{display:flex;gap:2px;direction:ltr;}
-.star-wrap{position:relative;width:32px;height:32px;cursor:pointer;user-select:none;flex-shrink:0;}
-.star-wrap svg{width:32px;height:32px;transition:.15s;}
-.star-wrap:hover svg{transform:scale(1.15);}
-.star-left,.star-right{position:absolute;top:0;height:100%;width:50%;}
-.star-left{left:0;}
-.star-right{right:0;}
+.stars{display:flex;gap:3px;direction:ltr;}
+.star-btn{background:none;border:none;font-size:30px;cursor:pointer;padding:0 2px;transition:.15s;line-height:1;user-select:none;}
+.star-btn:hover{transform:scale(1.2);}
 .rnote{width:100%;background:var(--warm);border:1.5px solid var(--border);border-radius:9px;padding:9px 13px;font-family:'Heebo',sans-serif;font-size:13px;outline:none;resize:none;min-height:62px;margin-top:10px;transition:.2s;}
 .rnote:focus{border-color:var(--terra);}
 .rarow{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap;}
@@ -847,9 +843,7 @@ function starsDisplay(avg){
   if(!avg) return '';
   let s='';
   for(let i=1;i<=5;i++){
-    if(avg>=i) s+='★';
-    else if(avg>=i-0.5) s+='⯨';
-    else s+='☆';
+    s += i <= avg ? '⭐' : '☆';
   }
   return s;
 }
@@ -1304,12 +1298,9 @@ function viewR(idx){
       <div class="stitle" style="margin-top:22px">⭐ דרגי את המתכון</div>
       <div class="rbox">
         <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px">איך יצא?</div>
-        <div class="stars" id="starsRow">${[1,2,3,4,5].map(i=>`
-  <div class="star-wrap" data-v="${i}">
-    ${starSvg(i,'empty')}
-    <div class="star-left" onmouseover="hoverStar(${i-0.5})" onmouseout="resetStar()" onclick="setStar(${i-0.5})"></div>
-    <div class="star-right" onmouseover="hoverStar(${i})" onmouseout="resetStar()" onclick="setStar(${i})"></div>
-  </div>`).join('')}</div>
+        <div class="stars" id="starsRow">
+  ${[1,2,3,4,5].map(i=>`<button class="star-btn" data-v="${i}" onclick="setStar(${i})" onmouseover="hoverStar(${i})" onmouseout="resetStar()">☆</button>`).join('')}
+</div>
         <div class="rarow">
           <button class="rab" onclick="pickRA(this,'נעם')">👧 נעם</button>
           <button class="rab" onclick="pickRA(this,'עמית')">👩 עמית</button>
@@ -1331,26 +1322,14 @@ function viewR(idx){
   document.getElementById('viewModal').classList.add('open');
 }
 
-function starSvg(pos, state){
-  // state: 'empty', 'half', 'full'
-  const yellow='#F5A623'; const gray='#E0D5C8';
-  if(state==='full') return `<svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="${yellow}" stroke="${yellow}" stroke-width="1"/>`;
-  if(state==='half') return `<svg viewBox="0 0 24 24"><defs><clipPath id="hc${pos}"><rect x="0" y="0" width="12" height="24"/></clipPath></defs><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="${gray}" stroke="${gray}" stroke-width="1"/><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="${yellow}" stroke="${yellow}" stroke-width="1" clip-path="url(#hc${pos})"/></svg>`;
-  return `<svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="${gray}" stroke="${gray}" stroke-width="1"/></svg>`;
-}
-
 function updateStars(v){
-  document.querySelectorAll('#starsRow .star-wrap').forEach(sw=>{
-    const pos = parseFloat(sw.dataset.v);
-    let state = 'empty';
-    if(v >= pos) state = 'full';
-    else if(v >= pos - 0.5) state = 'half';
-    sw.innerHTML = starSvg(pos, state) +
-      `<div class="star-left" onmouseover="hoverStar(${pos-0.5})" onmouseout="resetStar()" onclick="setStar(${pos-0.5})"></div>` +
-      `<div class="star-right" onmouseover="hoverStar(${pos})" onmouseout="resetStar()" onclick="setStar(${pos})"></div>`;
+  document.querySelectorAll('#starsRow .star-btn').forEach(btn=>{
+    const pos = parseInt(btn.dataset.v);
+    btn.textContent = pos <= v ? '⭐' : '☆';
+    btn.style.opacity = pos <= v ? '1' : '0.35';
   });
 }
-function setStar(v){tStars=v;updateStars(v);}
+function setStar(v){tStars=v;updateStars(v);console.log('⭐ setStar:', v);}
 function hoverStar(v){updateStars(v);}
 function resetStar(){updateStars(tStars);}
 function pickRA(btn,v){rAu=v==='__f__'?'':v;document.querySelectorAll('.rab').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');const r=document.getElementById('rfRow2');if(r)r.style.display=v==='__f__'?'block':'none';}
