@@ -395,14 +395,25 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
      </div>
     </div>
 
-    <!-- Caption extract section - shown for non-YouTube links -->
-    <div class="fg" id="captionSection" style="display:none">
-     <div style="background:linear-gradient(135deg,#FFF4EE,#FFFBF5);border:1.5px solid var(--terra-l);border-radius:13px;padding:14px 16px;margin-bottom:12px;">
-      <div style="font-size:13px;font-weight:700;color:var(--terra);margin-bottom:6px">💡 לחילוץ מתכון אוטומטי:</div>
-      <div style="font-size:13px;color:var(--brown);line-height:1.6">פתחי את הפוסט ← לחצי על "...עוד" ← העתיקי את הכיתוב ← הדביקי כאן:</div>
+    <!-- Caption extract section -->
+    <div id="captionSection" style="display:none;margin-bottom:16px">
+     <div style="background:linear-gradient(135deg,#FFF4EE,#FFFBF5);border:1.5px solid var(--terra-l);border-radius:14px;padding:16px;margin-bottom:10px;font-size:13px;color:var(--brown);line-height:1.8">
+      <div style="font-weight:700;color:var(--terra);font-size:14px;margin-bottom:4px">📋 אינסטגרם / טיקטוק / אחר</div>
+      פתחי את הפוסט ← לחצי <strong>"...עוד"</strong> ← <strong>העתיקי את כל הטקסט</strong> ← הדביקי כאן:
      </div>
-     <textarea class="txt-area-big" id="captionIn" placeholder="הדביקי כאן את הכיתוב של הפוסט (caption)..." style="min-height:100px"></textarea>
-     <button class="btn-extract" onclick="extractFromCaption()" style="margin-top:10px">✨ חלצי מתכון מהטקסט</button>
+     <textarea id="captionIn" class="txt-area-big" rows="5"
+       placeholder="הדביקי כאן את הכיתוב של הפוסט — מצרכים, שלבים, כל מה שיש...
+
+לדוגמה:
+200 גרם שוקולד
+1 כוס קמח
+...
+מחממים תנור ל-180..."
+       style="min-height:110px;font-size:13px"></textarea>
+     <button onclick="extractFromCaption()"
+       style="width:100%;margin-top:10px;background:linear-gradient(135deg,var(--terra),var(--mustard));color:#fff;border:none;border-radius:12px;padding:14px;font-family:Heebo,sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      ✨ חלצי מתכון אוטומטי
+     </button>
     </div>
 
     <div class="fg"><label class="fl">📝 שם המתכון</label><input class="fi" id="nameIn" placeholder="למשל: פסטה קרמית עם עגבניות שרי" /></div>
