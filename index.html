@@ -863,40 +863,75 @@ async function fetchMeta(){
   const ld=document.getElementById('fetchLoad');
   const msgEl=document.getElementById('fetchMsg');
   btn.disabled=true; ld.classList.add('show'); document.getElementById('prevBox').classList.remove('show');
-  const msgs=['שולפת פרטים... 🔍','מחפשת כותרת... 📋','טוענת תמונה... 🖼️','כמעט... ✨'];
+  const msgs=['שולפת פרטים... 🔍','מנסה לחלץ מתכון... 🍳','עוד רגע... ✨'];
   let mi=0; msgEl.textContent=msgs[0];
   const tick=setInterval(()=>{mi=(mi+1)%msgs.length;msgEl.textContent=msgs[mi];},1200);
   let title='',thumb='',sub='';
   const vid=ytId(url);
+
+  // YouTube — use oEmbed
   if(vid){
     try{
       const res=await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${vid}&format=json`);
       if(res.ok){const d=await res.json();title=d.title||'';thumb=`https://i.ytimg.com/vi/${vid}/mqdefault.jpg`;sub=`YouTube · ${d.author_name||''}`;}
     }catch(e){}
   }
-  if(!title){
+
+  // Instagram / TikTok / other — ask AI to extract full recipe from URL
+  if(!vid){
     try{
       const p=plat(url);
-      const prompt=`קיבלת לינק לסרטון מתכון: ${url}\nפלטפורמה: ${p.n}\nנסה לזהות מה המתכון מתוך הURL.\nהחזר JSON בלבד:\n{"title":"שם מתכון בעברית","notes":"תיאור קצר","category":"אחד מ: קינוחים/אסיאתי/ראשונות/עיקריות/לחמים ומאפים/שתייה/מרקים/סלטים/ארוחת בוקר/ביס מהיר/רוצים לנסות"}`;
-      const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,messages:[{role:'user',content:prompt}]})});
+      const cats='אוכל ביתי/קינוחים/אסיאתי/ראשונות/עיקריות/לחמים ומאפים/שתייה/מרקים/סלטים/ארוחת בוקר/ביס מהיר/נשנושים/ליד האוכל/רוצים לנסות';
+      const prompt=`קיבלת לינק לפוסט/סרטון מתכון מ-${p.n}: ${url}
+
+נסה לחלץ את המתכון המלא מה-URL. ה-URL עצמו לפעמים מכיל רמזים לגבי שם המתכון.
+
+אם אתה יכול לזהות מתכון — החזר JSON מלא:
+{"title":"שם מתכון בעברית","category":"אחד מ: ${cats}","notes":"תיאור קצר","ingredients":["מצרך 1","..."],"steps":["שלב 1","..."],"prepTime":"X דקות","servings":"X מנות"}
+
+אם אתה לא יכול לזהות את המתכון המלא מה-URL בלבד — החזר:
+{"title":"","category":"רוצים לנסות","notes":"הדביקי את טקסט הפוסט בטאב טקסט כדי לחלץ את המתכון","ingredients":[],"steps":[]}`;
+
+      const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:prompt}]})});
       const d=await r.json();
-      const j=JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
-      title=j.title||'';
-      if(j.notes) document.getElementById('notesIn').value=j.notes;
-      if(j.category) document.querySelectorAll('#catGrid .ob').forEach(b=>{if(b.textContent.trim().includes(j.category)){pickCat(b,j.category);}});
-      sub=p.n;
-    }catch(e){}
+      if(d.content?.[0]?.text){
+        const j=JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
+        title=j.title||'';
+        if(j.notes) document.getElementById('notesIn').value=j.notes;
+        if(j.category) document.querySelectorAll('#catGrid .ob').forEach(b=>{const lbl=b.textContent.trim().replace(/[^\u0590-\u05FF\s]/g,'').trim();if(j.category===lbl||j.category.includes(lbl)){pickCat(b,j.category);}});
+        // If full recipe extracted, populate fields
+        if(j.ingredients&&j.ingredients.length>0){
+          document.getElementById('ingIn').value=j.ingredients.join('\n');
+        }
+        if(j.steps&&j.steps.length>0){
+          document.getElementById('stepsIn').value=j.steps.join('\n');
+        }
+        if(j.prepTime) document.getElementById('timeIn').value=j.prepTime;
+        if(j.servings) document.getElementById('servIn').value=j.servings;
+        sub=p.n;
+        // If no title — suggest pasting text
+        if(!title){
+          toast('💡 הדביקי את טקסט הפוסט בטאב "טקסט / PDF" לחילוץ אוטומטי');
+        }
+      }
+    }catch(e){console.log('fetchMeta error:',e);}
   }
+
   clearInterval(tick); ld.classList.remove('show'); btn.disabled=false;
   if(title){
     document.getElementById('nameIn').value=title; pendThumb=thumb;
     document.getElementById('prevImg').src=thumb||'';
     document.getElementById('prevImg').style.display=thumb?'block':'none';
     document.getElementById('prevTitle').textContent=title;
-    document.getElementById('prevSub').textContent=sub;
+    document.getElementById('prevSub').textContent=sub||plat(url).n;
     document.getElementById('prevBox').classList.add('show');
     toast('✅ פרטים נשלפו!');
-  } else { toast('⚠️ לא הצלחתי — מלאי ידנית'); }
+  } else {
+    document.getElementById('prevSub').textContent='';
+    document.getElementById('prevBox').classList.remove('show');
+    if(plat(url).n !== 'קישור') toast('💡 לחילוץ מלא — הדביקי את טקסט הפוסט בטאב "טקסט / PDF"');
+    else toast('⚠️ לא הצלחתי — מלאי ידנית');
+  }
 }
 function onUrlTyped(){document.getElementById('prevBox').classList.remove('show');pendThumb='';}
 
