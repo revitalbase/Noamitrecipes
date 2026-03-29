@@ -394,6 +394,17 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
       <div class="prev-body"><div class="prev-title" id="prevTitle"></div><div class="prev-sub" id="prevSub"></div></div>
      </div>
     </div>
+
+    <!-- Caption extract section - shown for non-YouTube links -->
+    <div class="fg" id="captionSection" style="display:none">
+     <div style="background:linear-gradient(135deg,#FFF4EE,#FFFBF5);border:1.5px solid var(--terra-l);border-radius:13px;padding:14px 16px;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;color:var(--terra);margin-bottom:6px">💡 לחילוץ מתכון אוטומטי:</div>
+      <div style="font-size:13px;color:var(--brown);line-height:1.6">פתחי את הפוסט ← לחצי על "...עוד" ← העתיקי את הכיתוב ← הדביקי כאן:</div>
+     </div>
+     <textarea class="txt-area-big" id="captionIn" placeholder="הדביקי כאן את הכיתוב של הפוסט (caption)..." style="min-height:100px"></textarea>
+     <button class="btn-extract" onclick="extractFromCaption()" style="margin-top:10px">✨ חלצי מתכון מהטקסט</button>
+    </div>
+
     <div class="fg"><label class="fl">📝 שם המתכון</label><input class="fi" id="nameIn" placeholder="למשל: פסטה קרמית עם עגבניות שרי" /></div>
     <div class="fg"><label class="fl">💬 הערות (אופציונלי)</label><textarea class="ft" id="notesIn" placeholder="נראה מדהים כי... שינויים שרוצה לנסות..."></textarea></div>
     <div class="fg"><label class="fl">🛒 מצרכים (אופציונלי)</label><textarea class="ft" id="ingIn" placeholder="כל מצרך בשורה חדשה..."></textarea></div>
@@ -933,7 +944,62 @@ async function fetchMeta(){
     else toast('⚠️ לא הצלחתי — מלאי ידנית');
   }
 }
-function onUrlTyped(){document.getElementById('prevBox').classList.remove('show');pendThumb='';}
+function onUrlTyped(){
+  document.getElementById('prevBox').classList.remove('show');
+  pendThumb='';
+  const url = document.getElementById('urlIn').value.trim();
+  const isYT = !!ytId(url);
+  const hasUrl = url.length > 10;
+  // Show caption section for Instagram/TikTok/other (not YouTube)
+  const cs = document.getElementById('captionSection');
+  if(cs) cs.style.display = (hasUrl && !isYT) ? 'block' : 'none';
+}
+
+async function extractFromCaption(){
+  const caption = document.getElementById('captionIn').value.trim();
+  const url = document.getElementById('urlIn').value.trim();
+  if(!caption){toast('❗ הדביקי כיתוב תחילה');return;}
+
+  const btn = document.querySelector('#captionSection .btn-extract');
+  const ov = document.getElementById('procOverlay');
+  const msg = document.getElementById('procMsg');
+  if(btn) btn.disabled=true;
+  ov.style.display='flex'; ov.style.position='fixed'; ov.style.zIndex='9999';
+  msg.textContent='מחלץ מתכון... 🍳';
+
+  const cats='אוכל ביתי/קינוחים/אסיאתי/ראשונות/עיקריות/לחמים ומאפים/שתייה/מרקים/סלטים/ארוחת בוקר/ביס מהיר/נשנושים/ליד האוכל/רוצים לנסות';
+  const rules=`תרגם לעברית. המר מידות: 1cup=240מ"ל,1oz=28ג,1lb=454ג,°F→°C=(F-32)/1.8,tbsp=כף,tsp=כפית. החזר JSON בלבד: {"name":"שם","category":"מתוך: ${cats}","prepTime":"X דקות","servings":"X מנות","ingredients":["מצרך","..."],"steps":["שלב","..."]}`;
+
+  try{
+    const res = await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,
+        messages:[{role:'user',content:'חלץ מתכון מהטקסט הבא:\n\n'+caption+'\n\n'+rules}]})});
+    const d = await res.json();
+    if(d.error) throw new Error(d.error.message);
+    const txt = d.content[0].text.trim().replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'').trim();
+    const j = JSON.parse(txt);
+
+    // Fill in the link tab fields
+    if(j.name) document.getElementById('nameIn').value=j.name;
+    if(j.ingredients?.length) document.getElementById('ingIn').value=j.ingredients.join('\n');
+    if(j.steps?.length) document.getElementById('stepsIn').value=j.steps.join('\n');
+    if(j.prepTime) document.getElementById('timeIn').value=j.prepTime;
+    if(j.servings) document.getElementById('servIn').value=j.servings;
+    if(j.category){
+      document.querySelectorAll('#catGrid .ob').forEach(b=>{
+        const lbl=b.textContent.trim().replace(/[^\u0590-\u05FF\s]/g,'').trim();
+        if(j.category===lbl||j.category.includes(lbl)||lbl.includes(j.category)) pickCat(b,j.category);
+      });
+    }
+    ov.style.display='none';
+    if(btn) btn.disabled=false;
+    toast('✅ מתכון חולץ! בדקי ומלאי שם ✨');
+  }catch(e){
+    ov.style.display='none';
+    if(btn) btn.disabled=false;
+    toast('❌ שגיאה: '+e.message.substring(0,60));
+  }
+}
 
 function pickAu(btn,v){
   document.querySelectorAll('[id^="au-"]').forEach(b=>b.classList.remove('sel'));
@@ -959,7 +1025,7 @@ function switchTab(tab){
 function openAdd(tab){
   curTab=tab||'link';
   document.getElementById('addModal').classList.add('open');
-  ['urlIn','nameIn','notesIn','ingIn','stepsIn','timeIn','servIn','friendIn','rawText','resName','resTime','resServ','resUrl','resUrlV'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['urlIn','nameIn','notesIn','ingIn','stepsIn','timeIn','servIn','friendIn','rawText','resName','resTime','resServ','resUrl','resUrlV','captionIn'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   selAu='';selCat='';pendThumb='';selLang='auto';pdfData=null;
   document.getElementById('friendRow').style.display='none';
   document.getElementById('prevBox').classList.remove('show');
