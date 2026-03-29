@@ -531,34 +531,42 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 const DB_KEY = 'mtr2';
 
 let _sb = null;
+let _sbInitPromise = null;
 async function initSupabase(){
   if(_sb) return _sb;
-  if(typeof supabase === 'undefined') return null;
-  try{
-    const res = await fetch('/api/config');
-    const cfg = await res.json();
-    if(cfg.supabaseUrl && cfg.supabaseKey){
-      _sb = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
-    }
-  }catch(e){}
-  return _sb;
+  if(_sbInitPromise) return _sbInitPromise;
+  _sbInitPromise = (async()=>{
+    if(typeof supabase === 'undefined') return null;
+    try{
+      const res = await fetch('/api/config');
+      const cfg = await res.json();
+      if(cfg.supabaseUrl && cfg.supabaseKey){
+        _sb = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, {
+          auth: { persistSession: false }
+        });
+      }
+    }catch(e){ console.log('Supabase init error:', e); }
+    return _sb;
+  })();
+  return _sbInitPromise;
 }
 
 function save(){
   const json = JSON.stringify(recipes);
+  // Save to localStorage immediately (for offline fallback)
   try{ localStorage.setItem(DB_KEY, json); }catch(e){}
-  // async cloud save
+  // Save to Supabase (cloud = master)
   initSupabase().then(sb=>{
     if(!sb) return;
     sb.from('recipes')
-      .upsert({id:'shared', data:json, updated_at: new Date().toISOString()})
-      .then(({error})=>{ if(error) console.log('Save error:', error); })
-      .catch(e=>console.log('Save catch:', e));
+      .upsert({id:'shared', data:json, updated_at: new Date().toISOString()}, {onConflict:'id'})
+      .then(({error})=>{ if(error) console.error('☁️ Save error:', error); })
+      .catch(e=>console.error('☁️ Save failed:', e));
   });
 }
 
 async function loadRecipes(){
-  // Always try Supabase first (cloud = source of truth)
+  // Always try Supabase first — it's the source of truth
   const sb = await initSupabase();
   if(sb){
     try{
@@ -566,13 +574,14 @@ async function loadRecipes(){
       if(!error && data && data.data){
         const parsed = JSON.parse(data.data);
         if(Array.isArray(parsed)){
+          // Update localStorage to match Supabase
           try{ localStorage.setItem(DB_KEY, data.data); }catch(e){}
           return parsed;
         }
       }
-    }catch(e){ console.log('Supabase load error:', e); }
+    }catch(e){}
   }
-  // Fallback: localStorage
+  // Fallback: localStorage (offline mode)
   try{
     const local = localStorage.getItem(DB_KEY);
     if(local){ const p=JSON.parse(local); if(Array.isArray(p)) return p; }
@@ -1227,49 +1236,12 @@ function closeLb(){document.getElementById('lb').classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
 // ── INIT ──
-if(!recipes.length){
-  recipes=[
-    {id:1,name:'',url:'https://www.youtube.com/watch?v=VAUHKh8Gkn0',category:'רוצים לנסות',author:'נעם',notes:'Shorts מיוטיוב',thumb:'https://i.ytimg.com/vi/VAUHKh8Gkn0/mqdefault.jpg',image:'',ingredients:'',steps:'',prepTime:'',servings:'',ratings:[],cookedPhotos:[],date:'23/03/2025',_meta:true},
-    {id:2,name:'',url:'https://www.youtube.com/watch?v=9-9o1iqV7_0',category:'רוצים לנסות',author:'נעם',notes:'יוטיוב',thumb:'https://i.ytimg.com/vi/9-9o1iqV7_0/mqdefault.jpg',image:'',ingredients:'',steps:'',prepTime:'',servings:'',ratings:[],cookedPhotos:[],date:'23/03/2025',_meta:true}
-  ];
-  save();
-}
-// ── INIT ──
 (async()=>{
-  let loaded = false;
+  // Always load from Supabase first (cloud = source of truth)
+  recipes = await loadRecipes();
 
-  // 1. Try window.storage first (persists in Claude across sessions!)
-  if(window.storage){
-    try{
-      const r = await window.storage.get(DB_KEY);
-      if(r && r.value){
-        const parsed = JSON.parse(r.value);
-        if(parsed && parsed.length > 0){
-          recipes = parsed;
-          loaded = true;
-        }
-      }
-    }catch(e){}
-  }
-
-  // 2. Fallback to localStorage (works in downloaded HTML file)
-  if(!loaded){
-    try{
-      const local = localStorage.getItem(DB_KEY);
-      if(local){
-        const parsed = JSON.parse(local);
-        if(parsed && parsed.length > 0){
-          recipes = parsed;
-          loaded = true;
-          // Mirror to window.storage so next session loads faster
-          if(window.storage) window.storage.set(DB_KEY, local).catch(()=>{});
-        }
-      }
-    }catch(e){}
-  }
-
-  // 3. Default demo recipes if nothing found
-  if(!loaded || recipes.length === 0){
+  // If nothing in cloud, use defaults
+  if(!recipes || recipes.length === 0){
     recipes=[
       {id:1,name:'',url:'https://www.youtube.com/watch?v=VAUHKh8Gkn0',category:'רוצים לנסות',author:'נעם',notes:'Shorts מיוטיוב',thumb:'https://i.ytimg.com/vi/VAUHKh8Gkn0/mqdefault.jpg',image:'',ingredients:'',steps:'',prepTime:'',servings:'',ratings:[],cookedPhotos:[],date:'23/03/2025',_meta:true},
       {id:2,name:'',url:'https://www.youtube.com/watch?v=9-9o1iqV7_0',category:'רוצים לנסות',author:'נעם',notes:'יוטיוב',thumb:'https://i.ytimg.com/vi/9-9o1iqV7_0/mqdefault.jpg',image:'',ingredients:'',steps:'',prepTime:'',servings:'',ratings:[],cookedPhotos:[],date:'23/03/2025',_meta:true}
@@ -1297,6 +1269,6 @@ if(!recipes.length){
   if(changed){save();render();}
 })();
 </script>
-<div class="version-badge">🍳 v1.3 — 29.03.2026</div>
+<div class="version-badge">🍳 v1.2 — 26.3.2026</div>
 </body>
 </html>
