@@ -176,9 +176,13 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 
 /* rating */
 .rbox{background:var(--cream);border-radius:14px;padding:18px;margin-bottom:18px;border:1px solid var(--border);}
-.stars{display:flex;gap:3px;direction:ltr;}
-.star-btn{background:none;border:none;font-size:30px;cursor:pointer;padding:0 2px;transition:.15s;line-height:1;user-select:none;}
-.star-btn:hover{transform:scale(1.2);}
+.stars{display:flex;gap:4px;direction:ltr;}
+.star-wrap2{position:relative;width:34px;height:34px;cursor:pointer;user-select:none;display:inline-flex;align-items:center;justify-content:center;}
+.star-wrap2 .star-char{font-size:30px;line-height:1;pointer-events:none;transition:.1s;}
+.star-wrap2 .half-l,.star-wrap2 .half-r{position:absolute;top:0;width:50%;height:100%;}
+.star-wrap2 .half-l{left:0;}
+.star-wrap2 .half-r{right:0;}
+.star-wrap2:hover .star-char{transform:scale(1.2);}
 .rnote{width:100%;background:var(--warm);border:1.5px solid var(--border);border-radius:9px;padding:9px 13px;font-family:'Heebo',sans-serif;font-size:13px;outline:none;resize:none;min-height:62px;margin-top:10px;transition:.2s;}
 .rnote:focus{border-color:var(--terra);}
 .rarow{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap;}
@@ -1299,7 +1303,12 @@ function viewR(idx){
       <div class="rbox">
         <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px">איך יצא?</div>
         <div class="stars" id="starsRow">
-  ${[1,2,3,4,5].map(i=>`<button class="star-btn" data-v="${i}" onclick="setStar(${i})" onmouseover="hoverStar(${i})" onmouseout="resetStar()">☆</button>`).join('')}
+  ${[1,2,3,4,5].map(i=>`
+    <div class="star-wrap2" data-v="${i}">
+      <span class="star-char" id="starChar${i}">☆</span>
+      <div class="half-l" onmouseover="hoverStar(${i}-0.5)" onmouseout="resetStar()" onclick="setStar(${i}-0.5)"></div>
+      <div class="half-r" onmouseover="hoverStar(${i})" onmouseout="resetStar()" onclick="setStar(${i})"></div>
+    </div>`).join('')}
 </div>
         <div class="rarow">
           <button class="rab" onclick="pickRA(this,'נעם')">👧 נעם</button>
@@ -1323,13 +1332,15 @@ function viewR(idx){
 }
 
 function updateStars(v){
-  document.querySelectorAll('#starsRow .star-btn').forEach(btn=>{
-    const pos = parseInt(btn.dataset.v);
-    btn.textContent = pos <= v ? '⭐' : '☆';
-    btn.style.opacity = pos <= v ? '1' : '0.35';
-  });
+  for(let i=1;i<=5;i++){
+    const el=document.getElementById('starChar'+i);
+    if(!el) continue;
+    if(v>=i)       el.textContent='⭐';
+    else if(v>=i-0.5) el.textContent='🌟';
+    else           el.textContent='☆';
+  }
 }
-function setStar(v){tStars=v;updateStars(v);console.log('⭐ setStar:', v);}
+function setStar(v){tStars=v;updateStars(v);}
 function hoverStar(v){updateStars(v);}
 function resetStar(){updateStars(tStars);}
 function pickRA(btn,v){rAu=v==='__f__'?'':v;document.querySelectorAll('.rab').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');const r=document.getElementById('rfRow2');if(r)r.style.display=v==='__f__'?'block':'none';}
