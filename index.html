@@ -324,10 +324,29 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 .header-btns{display:flex;gap:8px;align-items:center;}
 
 @media(max-width:600px){
-  .header,.main,.cats{padding-inline:18px;}
+  .main,.cats{padding-inline:14px;}
   .og{grid-template-columns:repeat(2,1fr);}
   .modal-body,.vbody{padding:18px;}
   .btn-backup span.txt{display:none;}
+
+  /* header — נייד: שורה אחת עם לוגו מצומצם */
+  .header{
+    padding:12px 14px;
+    min-height:auto;
+    flex-wrap:nowrap;
+    gap:8px;
+    align-items:center;
+  }
+  .logo{font-size:20px !important;white-space:nowrap;}
+  .sub{display:none;}
+  .header-bg{display:none;}
+  .btn-add{padding:8px 12px;font-size:13px;}
+  .btn-backup{padding:7px 10px;font-size:12px;}
+  .header-btns{gap:5px;}
+
+  /* grid — עמודה אחת במובייל */
+  .grid{grid-template-columns:1fr;}
+  .card-thumb{height:180px;}
 }
 
 /* version badge */
@@ -344,6 +363,12 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<!-- מסך טעינה -->
+<div id="loadingScreen" style="position:fixed;inset:0;background:#1a1a1a;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <div style="width:48px;height:48px;border:3px solid rgba(245,240,232,.2);border-top-color:#f5f0e8;border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div style="color:rgba(245,240,232,.7);font-family:Heebo,sans-serif;font-size:15px">טוענת מתכונים...</div>
+</div>
 
 <header class="header">
   <!-- רקע לוח גיר — ציורי קו SVG -->
@@ -1986,16 +2011,22 @@ async function manualBackup(){
 
 // ── INIT ──
 (async()=>{
-  // Always load from Supabase first (cloud = source of truth)
-  recipes = await loadRecipes();
+  // טען מ-localStorage מיד — כדי לא להשאיר מסך ריק
+  try{
+    const local = localStorage.getItem('mtr2');
+    if(local){ const p=JSON.parse(local); if(Array.isArray(p)&&p.length>2){ recipes=p; render(); }}
+  }catch(e){}
 
-  // If nothing in cloud, use defaults
-  if(!recipes || recipes.length === 0){
-    recipes=[
-      {id:1,name:'',url:'https://www.youtube.com/watch?v=VAUHKh8Gkn0',category:'רוצים לנסות',author:'נעם',notes:'Shorts מיוטיוב',thumb:'https://i.ytimg.com/vi/VAUHKh8Gkn0/mqdefault.jpg',image:'',ingredients:'',steps:'',prepTime:'',servings:'',ratings:[],cookedPhotos:[],date:'23/03/2025',_meta:true},
-      {id:2,name:'',url:'https://www.youtube.com/watch?v=9-9o1iqV7_0',category:'רוצים לנסות',author:'נעם',notes:'יוטיוב',thumb:'https://i.ytimg.com/vi/9-9o1iqV7_0/mqdefault.jpg',image:'',ingredients:'',steps:'',prepTime:'',servings:'',ratings:[],cookedPhotos:[],date:'23/03/2025',_meta:true}
-    ];
-    save();
+  // Always load from Supabase (cloud = source of truth)
+  const cloudRecipes = await loadRecipes();
+
+  if(cloudRecipes && cloudRecipes.length > 0){
+    recipes = cloudRecipes;
+    // שמור ל-localStorage כ-cache
+    try{ localStorage.setItem('mtr2', JSON.stringify(cloudRecipes)); }catch(e){}
+  } else if(!recipes || recipes.length === 0){
+    // אין כלום — אל תדרוס! פשוט הראה ריק
+    recipes = [];
   }
 
   // Fix old thumbs
@@ -2004,6 +2035,10 @@ async function manualBackup(){
   if(thumbFixed) save();
 
   render();
+
+  // הסתר מסך טעינה
+  const ls = document.getElementById('loadingScreen');
+  if(ls) ls.style.display = 'none';
 
   // גיבוי אוטומטי יומי (אחרי טעינה)
   setTimeout(autoBackup, 5000);
@@ -2021,6 +2056,6 @@ async function manualBackup(){
   if(changed){save();render();}
 })();
 </script>
-<div class="version-badge">🍳 v2.6 — 30.3.2026</div>
+<div class="version-badge">🍳 v2.8 — 30.3.2026</div>
 </body>
 </html>
