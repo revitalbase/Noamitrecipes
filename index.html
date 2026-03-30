@@ -1581,9 +1581,9 @@ async function quickFetchThumb(){
   const url = document.getElementById('qUrlIn').value.trim();
   if(!url){ toast('❗ הדביקי לינק תחילה'); return; }
   const btn = document.getElementById('qFetchBtn');
-  btn.disabled = true; btn.textContent = '⏳';
+  btn.disabled = true; btn.textContent = '⏳ שולף...';
 
-  // יוטיוב — ישיר
+  // יוטיוב — ישיר, ללא שרת
   const vid = ytId(url);
   if(vid){
     showQThumb(`https://i.ytimg.com/vi/${vid}/mqdefault.jpg`);
@@ -1592,58 +1592,45 @@ async function quickFetchThumb(){
     return;
   }
 
-  // אינסטגרם oEmbed (רשמי, ללא מפתח)
-  if(url.includes('instagram.com')){
-    try{
-      const res = await fetch(`https://www.instagram.com/api/v1/oembed/?url=${encodeURIComponent(url)}&maxwidth=480`);
-      if(res.ok){
-        const d = await res.json();
-        if(d.thumbnail_url){ showQThumb(d.thumbnail_url); btn.disabled=false; btn.textContent='📸 שלוף'; toast('✅ תמונה נשלפה!'); return; }
-      }
-    }catch(e){}
-
-    // fallback — Claude יחלץ תמונה מהלינק
-    try{
-      const res2 = await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,
-          messages:[{role:'user',content:`מה ה-thumbnail URL של הפוסט הזה באינסטגרם: ${url}
-החזר רק URL תמונה תקני אם יש, אחרת החזר את המילה null`}]})});
-      const d2 = await res2.json();
-      const txt = (d2.content?.[0]?.text||'').trim();
-      if(txt && txt !== 'null' && txt.startsWith('http')){ showQThumb(txt); btn.disabled=false; btn.textContent='📸 שלוף'; toast('✅ תמונה נשלפה!'); return; }
-    }catch(e){}
-
-    toast('💡 אינסטגרם חוסמת גישה לתמונות — הוסיפי ידנית אחרי השמירה');
-    btn.disabled=false; btn.textContent='📸 שלוף';
-    return;
-  }
-
-  // TikTok oEmbed
-  if(url.includes('tiktok.com')){
-    try{
-      const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
-      if(res.ok){
-        const d = await res.json();
-        if(d.thumbnail_url){ showQThumb(d.thumbnail_url); btn.disabled=false; btn.textContent='📸 שלוף'; toast('✅ תמונה נשלפה!'); return; }
-      }
-    }catch(e){}
-    toast('💡 לא הצלחתי לשלוף מטיקטוק — הוסיפי ידנית');
-    btn.disabled=false; btn.textContent='📸 שלוף';
-    return;
-  }
-
-  // כל לינק אחר — microlink
+  // כל שאר הלינקים (אינסטגרם / אתרי מתכונים / כל אתר) — דרך השרת
   try{
-    const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}&video=false`);
+    const res = await fetch(`/api/thumb?url=${encodeURIComponent(url)}`);
     const d = await res.json();
-    const img = d?.data?.image?.url || d?.data?.screenshot?.url || '';
-    if(img){ showQThumb(img); toast('✅ תמונה נשלפה!'); }
-    else { toast('💡 לא נמצאה תמונה — הוסיפי ידנית אחרי השמירה'); }
+
+    // תמונה
+    if(d.thumb) showQThumb(d.thumb);
+
+    // טקסט — אם יש, אכלס את שדה הטקסט אוטומטית
+    if(d.text && d.text.length > 50){
+      const txtField = document.getElementById('qTextIn');
+      if(!txtField.value.trim()){
+        txtField.value = d.text;
+        txtField.style.borderColor = 'var(--sage)';
+        setTimeout(()=>txtField.style.borderColor='', 2000);
+      }
+    }
+
+    // כותרת — אם השדה ריק
+    if(d.title){
+      const preview = document.getElementById('qThumbPreview');
+      if(!preview.dataset.title) preview.dataset.title = d.title;
+    }
+
+    if(d.thumb && d.text){
+      toast('✅ תמונה וטקסט נשלפו אוטומטית!');
+    } else if(d.thumb){
+      toast('✅ תמונה נשלפה! הדביקי טקסט ידנית אם צריך');
+    } else if(d.text){
+      toast('✅ טקסט נשלף! תמונה לא נמצאה — הוסיפי ידנית');
+    } else {
+      toast('💡 לא נמצא תוכן — הדביקי טקסט ידנית');
+    }
   }catch(e){
-    toast('💡 לא הצלחתי לשלוף תמונה — הוסיפי ידנית אחרי השמירה');
+    toast('💡 שגיאה בשליפה — הדביקי טקסט ידנית');
   }
   btn.disabled = false; btn.textContent = '📸 שלוף';
 }
+
 
 async function quickSave(){
   const url = document.getElementById('qUrlIn').value.trim();
@@ -1792,6 +1779,6 @@ async function manualBackup(){
   if(changed){save();render();}
 })();
 </script>
-<div class="version-badge">🍳 v1.6 — 30.3.2026</div>
+<div class="version-badge">🍳 v1.8 — 30.3.2026</div>
 </body>
 </html>
