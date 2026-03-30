@@ -2040,6 +2040,11 @@ async function manualBackup(){
   const ls = document.getElementById('loadingScreen');
   if(ls) ls.style.display = 'none';
 
+  // ודא שברירת מחדל היא הכל
+  curCat = 'all';
+  const allBtn = document.querySelector('.cat-btn');
+  if(allBtn){ document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active')); allBtn.classList.add('active'); }
+
   // גיבוי אוטומטי יומי (אחרי טעינה)
   setTimeout(autoBackup, 5000);
 
@@ -2056,6 +2061,6 @@ async function manualBackup(){
   if(changed){save();render();}
 })();
 </script>
-<div class="version-badge">🍳 v2.8 — 30.3.2026</div>
+<div class="version-badge">🍳 v2.9 — 30.3.2026</div>
 </body>
 </html>
