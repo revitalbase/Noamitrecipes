@@ -17,48 +17,88 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 
 
 .header{
-  background: linear-gradient(135deg, #1a0533 0%, #0d1f4a 40%, #0a2e1a 100%);
-  padding:22px 36px;
+  background: #1a1a1a;
+  padding:0 48px;
   display:flex;align-items:center;justify-content:space-between;
   position:sticky;top:0;z-index:100;
-  box-shadow:0 4px 32px rgba(0,0,0,.5);
+  box-shadow:0 2px 20px rgba(0,0,0,.6);
   overflow:hidden;
+  min-height:114px;
 }
+/* לוח גיר — SVG ציורי קו לבן ברקע */
 .header-bg{
-  position:absolute;inset:0;pointer-events:none;
-  overflow:hidden;z-index:0;
+  position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;
+  opacity:.55;
 }
-.header-bg span{
-  position:absolute;
-  font-size:28px;
-  animation:floatEmoji linear infinite;
-  opacity:.18;
-  user-select:none;
-}
-@keyframes floatEmoji{
-  0%  {transform:translateY(120%) rotate(0deg);   opacity:0;}
-  10% {opacity:.2;}
-  90% {opacity:.18;}
-  100%{transform:translateY(-120%) rotate(25deg); opacity:0;}
-}
+.header-bg svg{ width:100%;height:100%; }
 .header > *{position:relative;z-index:1;}
 .logo{
-  font-family:'Playfair Display',serif;font-size:28px;
-  color:#fff;display:flex;align-items:center;gap:10px;
-  text-shadow: 0 2px 12px rgba(0,0,0,.4);
+  font-family:'Playfair Display',serif;font-size:38px;
+  color:#f5f0e8;display:flex;align-items:center;gap:10px;
+  letter-spacing:.5px;
+  text-shadow: 2px 2px 0 rgba(255,255,255,.08), 0 0 20px rgba(255,255,255,.1);
+  /* אפקט כתב גיר */
+  filter: url(#chalk);
 }
-.sub{font-size:12px;color:rgba(255,255,255,.65);margin-top:2px;letter-spacing:.8px;font-weight:300;}
-.btn-add{background:var(--terra);color:#fff;border:none;padding:10px 20px;border-radius:50px;font-family:'Heebo',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:.2s;}
-.btn-add:hover{background:var(--terra-l);transform:translateY(-1px);box-shadow:0 4px 14px rgba(201,96,58,.4);}
+.logo-icon{
+  width:42px;height:42px;
+  background:none;
+  display:flex;align-items:center;justify-content:center;
+}
+.sub{
+  font-size:13px;color:rgba(245,240,232,.55);
+  margin-top:4px;letter-spacing:1.4px;font-weight:300;
+  font-family:'Heebo',sans-serif;
+}
+.btn-add{
+  background:none;
+  color:#f5f0e8;
+  border:1.5px solid rgba(245,240,232,.6);
+  padding:9px 20px;border-radius:4px;
+  font-family:'Heebo',sans-serif;font-size:14px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;gap:6px;transition:.2s;
+  letter-spacing:.3px;
+  /* מראה כפתור על לוח גיר */
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.btn-add:hover{
+  background:rgba(245,240,232,.12);
+  border-color:rgba(245,240,232,.9);
+  transform:translateY(-1px);
+}
 
-.cats{background:var(--warm);border-bottom:2px solid var(--border);padding:14px 36px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;}
+.cats{
+  background:#222;
+  border-bottom:1px solid #333;
+  padding:10px 48px;
+  display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;
+}
 .cats::-webkit-scrollbar{display:none;}
-.cat-btn{border:2px solid var(--border);border-radius:50px;padding:7px 16px;font-family:'Heebo',sans-serif;font-size:13px;cursor:pointer;white-space:nowrap;transition:.2s;color:var(--muted);background:none;}
-.cat-btn:hover{border-color:var(--terra);color:var(--terra);}
-.cat-btn.active{background:var(--terra);border-color:var(--terra);color:#fff;font-weight:600;}
-.cat-tiktok{background:linear-gradient(135deg,#111,#1a1a2e)!important;border-color:#111!important;color:#fff!important;font-weight:600;}
-.cat-tiktok.active{background:linear-gradient(135deg,#ff0050,#00f2ea)!important;border-color:transparent!important;}
-.cat-tiktok:hover{background:linear-gradient(135deg,#ff0050,#00f2ea)!important;border-color:transparent!important;color:#fff!important;}
+.cat-btn{
+  border:1.5px solid rgba(245,240,232,.25);
+  border-radius:3px;
+  padding:6px 14px;
+  font-family:'Heebo',sans-serif;font-size:12px;
+  cursor:pointer;white-space:nowrap;transition:.2s;
+  color:rgba(245,240,232,.6);
+  background:none;
+  letter-spacing:.4px;
+  font-weight:500;
+}
+.cat-btn:hover{
+  border-color:rgba(245,240,232,.8);
+  color:#f5f0e8;
+  background:rgba(245,240,232,.06);
+}
+.cat-btn.active{
+  background:rgba(245,240,232,.15);
+  border-color:#f5f0e8;
+  color:#f5f0e8;
+  font-weight:700;
+}
+.cat-tiktok{border-color:rgba(245,240,232,.2)!important;color:rgba(245,240,232,.5)!important;border-style:dashed!important;}
+.cat-tiktok.active{background:rgba(245,240,232,.15)!important;border-color:#f5f0e8!important;color:#f5f0e8!important;border-style:solid!important;}
+.cat-tiktok:hover{border-color:rgba(245,240,232,.7)!important;color:#f5f0e8!important;}
 
 .main{max-width:1160px;margin:0 auto;padding:32px 36px;}
 .search-input{width:100%;background:var(--warm);border:2px solid var(--border);border-radius:50px;padding:12px 22px;font-family:'Heebo',sans-serif;font-size:15px;outline:none;transition:.2s;margin-bottom:24px;}
@@ -278,8 +318,8 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 .big-spinner{width:44px;height:44px;border:4px solid var(--border);border-top-color:var(--terra);border-radius:50%;animation:spin .8s linear infinite;}
 .proc-msg{font-size:15px;font-weight:600;color:var(--dark);text-align:center;}
 
-.btn-backup{background:rgba(255,255,255,.12);color:var(--cream);border:1.5px solid rgba(255,255,255,.25);padding:8px 14px;border-radius:50px;font-family:'Heebo',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:.2s;}
-.btn-backup:hover{background:rgba(255,255,255,.22);}
+.btn-backup{background:none;color:#f5f0e8;border:1.5px solid rgba(245,240,232,.4);padding:8px 14px;border-radius:4px;font-family:'Heebo',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:.2s;letter-spacing:.3px;}
+.btn-backup:hover{background:rgba(245,240,232,.1);border-color:rgba(245,240,232,.8);}
 .header-btns{display:flex;gap:8px;align-items:center;}
 
 @media(max-width:600px){
@@ -305,28 +345,183 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 <body>
 
 <header class="header">
+  <!-- רקע לוח גיר — ציורי קו SVG -->
   <div class="header-bg" aria-hidden="true">
-    <span style="left:3%;animation-duration:9s;animation-delay:0s;font-size:22px">🍕</span>
-    <span style="left:8%;animation-duration:12s;animation-delay:2s;font-size:26px">🍣</span>
-    <span style="left:14%;animation-duration:8s;animation-delay:1s;font-size:20px">🥑</span>
-    <span style="left:19%;animation-duration:11s;animation-delay:3s;font-size:24px">🍜</span>
-    <span style="left:25%;animation-duration:10s;animation-delay:0.5s;font-size:18px">🧁</span>
-    <span style="left:30%;animation-duration:13s;animation-delay:4s;font-size:28px">🌮</span>
-    <span style="left:36%;animation-duration:9s;animation-delay:1.5s;font-size:22px">🍰</span>
-    <span style="left:42%;animation-duration:11s;animation-delay:2.5s;font-size:20px">🥗</span>
-    <span style="left:48%;animation-duration:8s;animation-delay:0s;font-size:26px">🍔</span>
-    <span style="left:54%;animation-duration:12s;animation-delay:3.5s;font-size:18px">🥐</span>
-    <span style="left:60%;animation-duration:10s;animation-delay:1s;font-size:24px">🍓</span>
-    <span style="left:65%;animation-duration:9s;animation-delay:4.5s;font-size:20px">🍩</span>
-    <span style="left:71%;animation-duration:13s;animation-delay:2s;font-size:28px">🥘</span>
-    <span style="left:77%;animation-duration:8s;animation-delay:0.5s;font-size:22px">🍋</span>
-    <span style="left:83%;animation-duration:11s;animation-delay:3s;font-size:18px">🌯</span>
-    <span style="left:89%;animation-duration:10s;animation-delay:1.5s;font-size:26px">🍦</span>
-    <span style="left:94%;animation-duration:9s;animation-delay:5s;font-size:20px">🥩</span>
+    <svg viewBox="0 0 1400 114" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round">
+      <defs>
+        <filter id="chalk" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+      </defs>
+      <!-- כוס -->
+      <g stroke-width="2" opacity="1" transform="translate(40,15)">
+        <path d="M8 4 Q8 2 12 2 Q16 2 16 4 L17 22 Q17 26 12 26 Q7 26 7 22 Z"/>
+        <line x1="7" y1="8" x2="17" y2="8"/>
+        <path d="M17 10 Q22 10 22 14 Q22 18 17 18"/>
+      </g>
+      <!-- סיר -->
+      <g stroke-width="2" opacity="1" transform="translate(100,12)">
+        <rect x="2" y="8" width="28" height="20" rx="2"/>
+        <line x1="0" y1="8" x2="32" y2="8"/>
+        <line x1="6" y1="5" x2="6" y2="8"/>
+        <line x1="26" y1="5" x2="26" y2="8"/>
+        <ellipse cx="16" cy="8" rx="14" ry="3"/>
+        <path d="M8 28 Q16 32 24 28"/>
+      </g>
+      <!-- בקבוק שמן -->
+      <g stroke-width="2" opacity="1" transform="translate(165,8)">
+        <path d="M10 3 L10 8 Q6 10 5 14 L4 30 Q4 34 10 34 Q16 34 16 30 L15 14 Q14 10 10 8 L10 3"/>
+        <line x1="8" y1="3" x2="12" y2="3"/>
+        <ellipse cx="10" cy="20" rx="4" ry="6" stroke-width="1.4"/>
+      </g>
+      <!-- עוגה -->
+      <g stroke-width="2" opacity="1" transform="translate(220,10)">
+        <rect x="2" y="16" width="28" height="16" rx="2"/>
+        <path d="M2 16 Q16 10 30 16"/>
+        <path d="M8 16 L8 8 Q12 4 16 8 Q20 4 24 8 L24 16" stroke-width="1"/>
+        <line x1="10" y1="20" x2="10" y2="28"/>
+        <line x1="16" y1="20" x2="16" y2="28"/>
+        <line x1="22" y1="20" x2="22" y2="28"/>
+      </g>
+      <!-- צנצנת -->
+      <g stroke-width="2" opacity="1" transform="translate(290,10)">
+        <rect x="4" y="6" width="22" height="26" rx="3"/>
+        <rect x="2" y="4" width="26" height="5" rx="2"/>
+        <line x1="4" y1="16" x2="26" y2="16"/>
+        <text x="15" y="26" font-size="6" text-anchor="middle" stroke-width="1" font-family="serif">מטבח</text>
+      </g>
+      <!-- מערוך -->
+      <g stroke-width="2" opacity="1" transform="translate(360,20)">
+        <rect x="10" y="4" width="30" height="12" rx="6"/>
+        <line x1="0" y1="10" x2="10" y2="10"/>
+        <line x1="40" y1="10" x2="50" y2="10"/>
+        <circle cx="0" cy="10" r="3"/>
+        <circle cx="50" cy="10" r="3"/>
+      </g>
+      <!-- ספל -->
+      <g stroke-width="2" opacity="1" transform="translate(450,14)">
+        <path d="M4 4 L4 24 Q4 28 14 28 Q24 28 24 24 L24 4 Z"/>
+        <line x1="4" y1="10" x2="0" y2="10"/>
+        <path d="M24 8 Q30 8 30 14 Q30 20 24 20"/>
+        <line x1="4" y1="4" x2="24" y2="4"/>
+      </g>
+      <!-- כף -->
+      <g stroke-width="2" opacity="1" transform="translate(520,8)">
+        <path d="M8 2 Q14 2 14 10 Q14 16 10 18 L10 38"/>
+        <path d="M8 2 Q2 2 2 8 Q2 14 8 18"/>
+      </g>
+      <!-- מזלג -->
+      <g stroke-width="2" opacity="1" transform="translate(545,8)">
+        <line x1="8" y1="2" x2="8" y2="38"/>
+        <line x1="4" y1="2" x2="4" y2="14"/>
+        <line x1="8" y1="2" x2="8" y2="14"/>
+        <line x1="12" y1="2" x2="12" y2="14"/>
+        <path d="M4 14 Q8 18 12 14"/>
+      </g>
+      <!-- פרח -->
+      <g stroke-width="1.8" opacity="1" transform="translate(590,5)">
+        <line x1="10" y1="30" x2="10" y2="50"/>
+        <path d="M10 30 Q6 22 10 18 Q14 22 10 30"/>
+        <circle cx="10" cy="16" r="5"/>
+        <circle cx="10" cy="8" r="3"/>
+        <circle cx="4" cy="12" r="3"/>
+        <circle cx="16" cy="12" r="3"/>
+      </g>
+      <!-- עץ עם ענפים -->
+      <g stroke-width="2" opacity="1" transform="translate(640,2)">
+        <line x1="12" y1="50" x2="12" y2="20"/>
+        <path d="M12 35 Q4 28 2 20"/>
+        <path d="M12 28 Q20 22 22 14"/>
+        <path d="M12 22 Q6 16 8 8"/>
+        <circle cx="2" cy="18" r="6" stroke-width="1"/>
+        <circle cx="23" cy="12" r="7" stroke-width="1"/>
+        <circle cx="7" cy="6" r="5" stroke-width="1"/>
+      </g>
+      <!-- קערה -->
+      <g stroke-width="2" opacity="1" transform="translate(700,18)">
+        <path d="M2 10 Q2 28 18 28 Q34 28 34 10"/>
+        <line x1="0" y1="10" x2="36" y2="10"/>
+        <path d="M8 10 Q18 6 28 10" stroke-width="1.4"/>
+      </g>
+      <!-- מחבת -->
+      <g stroke-width="2" opacity="1" transform="translate(770,16)">
+        <ellipse cx="18" cy="16" rx="16" ry="10"/>
+        <line x1="2" y1="16" x2="-14" y2="20"/>
+        <ellipse cx="18" cy="10" rx="10" ry="5" stroke-width="1.4"/>
+      </g>
+      <!-- מסחטה -->
+      <g stroke-width="2" opacity="1" transform="translate(850,10)">
+        <path d="M4 30 L4 14 Q4 4 14 4 Q24 4 24 14 L24 30"/>
+        <line x1="2" y1="30" x2="26" y2="30"/>
+        <path d="M10 14 Q14 20 18 14"/>
+        <circle cx="14" cy="12" r="4" stroke-width="1.4"/>
+      </g>
+      <!-- ספר מתכונים -->
+      <g stroke-width="2" opacity="1" transform="translate(910,10)">
+        <rect x="2" y="2" width="26" height="36" rx="2"/>
+        <line x1="12" y1="2" x2="12" y2="38"/>
+        <line x1="15" y1="10" x2="25" y2="10"/>
+        <line x1="15" y1="15" x2="25" y2="15"/>
+        <line x1="15" y1="20" x2="25" y2="20"/>
+        <line x1="15" y1="25" x2="25" y2="25"/>
+      </g>
+      <!-- צנצנת תבלין -->
+      <g stroke-width="2" opacity="1" transform="translate(975,12)">
+        <rect x="6" y="6" width="16" height="24" rx="2"/>
+        <rect x="4" y="4" width="20" height="5" rx="2"/>
+        <circle cx="14" cy="18" r="4" stroke-width="1.4"/>
+      </g>
+      <!-- פטיש בשר -->
+      <g stroke-width="2" opacity="1" transform="translate(1030,8)">
+        <rect x="4" y="2" width="20" height="14" rx="3"/>
+        <line x1="14" y1="16" x2="14" y2="40"/>
+        <line x1="6" y1="6" x2="22" y2="6" stroke-width="1.2"/>
+        <line x1="6" y1="10" x2="22" y2="10" stroke-width="1.2"/>
+      </g>
+      <!-- פרחים ועלים -->
+      <g stroke-width="1.8" opacity="1" transform="translate(1090,4)">
+        <path d="M10 46 Q10 30 10 20"/>
+        <path d="M10 36 Q2 30 0 22 Q8 20 10 28"/>
+        <path d="M10 28 Q18 22 20 14 Q12 12 10 20"/>
+        <path d="M10 20 Q4 12 6 4 Q14 6 12 14"/>
+      </g>
+      <!-- כד -->
+      <g stroke-width="2" opacity="1" transform="translate(1140,8)">
+        <path d="M12 2 Q8 2 6 6 L4 14 Q2 22 6 28 Q10 34 14 34 Q18 34 22 28 Q26 22 24 14 L22 6 Q20 2 16 2 Z"/>
+        <line x1="10" y1="2" x2="18" y2="2"/>
+        <path d="M22 12 Q28 12 28 18 Q28 22 22 22" stroke-width="1"/>
+      </g>
+      <!-- מיקסר -->
+      <g stroke-width="2" opacity="1" transform="translate(1210,10)">
+        <rect x="4" y="2" width="22" height="18" rx="3"/>
+        <circle cx="15" cy="11" r="5"/>
+        <line x1="15" y1="20" x2="15" y2="34"/>
+        <path d="M10 34 Q15 38 20 34"/>
+      </g>
+      <!-- מגש אפייה -->
+      <g stroke-width="2" opacity="1" transform="translate(1280,20)">
+        <rect x="2" y="4" width="40" height="20" rx="3"/>
+        <circle cx="12" cy="14" r="4"/>
+        <circle cx="22" cy="14" r="4"/>
+        <circle cx="32" cy="14" r="4"/>
+      </g>
+      <!-- קווים אופקיים כמו לוח -->
+      <line x1="0" y1="2" x2="1400" y2="2" stroke-width="0.8" opacity="0.5"/>
+      <line x1="0" y1="86" x2="1400" y2="86" stroke-width="0.8" opacity="0.5"/>
+    </svg>
   </div>
   <div>
-    <div class="logo">🍳 מתכונים שבא לנו</div>
-    <div class="sub">המטבח של נעם, עמית, רוי וחברים 🧑‍🍳</div>
+    <div class="logo" style="filter:none">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="16" stroke="#f5f0e8" stroke-width="1.5" opacity="0.6"/>
+        <path d="M12 22 Q18 14 24 22" stroke="#f5f0e8" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        <circle cx="18" cy="12" r="3" stroke="#f5f0e8" stroke-width="1.5" fill="none"/>
+        <line x1="18" y1="15" x2="18" y2="20" stroke="#f5f0e8" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      מתכונים שבא לנו
+    </div>
+    <div class="sub">המטבח של נעם, עמית, רוי וחברים</div>
   </div>
   <div class="header-btns">
     <label class="btn-backup" title="שחזור מגיבוי" style="cursor:pointer">
@@ -1776,6 +1971,6 @@ async function manualBackup(){
   if(changed){save();render();}
 })();
 </script>
-<div class="version-badge">🍳 v1.8 — 30.3.2026</div>
+<div class="version-badge">🍳 v2.1 — 30.3.2026</div>
 </body>
 </html>
