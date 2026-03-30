@@ -709,7 +709,7 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
      <label class="fl">🙋 מי מוסיף/ה?</label>
      <div class="og" style="grid-template-columns:repeat(4,1fr)">
       <button class="ob" onclick="pickAu(this,'נעם')" id="au-נעם"><span class="e">👧</span>נעם</button>
-      <button class="ob" onclick="pickAu(this,'עמית')" id="au-עמית"><span class="e">👩</span>עמית</button>
+      <button class="ob" onclick="pickAu(this,'עמית')" id="au-עמית"><span class="e">👦</span>עמית</button>
       <button class="ob" onclick="pickAu(this,'רוי')" id="au-רוי"><span class="e">👩‍🍳</span>רוי</button>
       <button class="ob" onclick="pickAu(this,'__f__')" id="au-f" style="border-style:dashed"><span class="e">🤝</span>חבר/ה</button>
      </div>
@@ -777,7 +777,7 @@ Bake at 180°C for 20 minutes..." style="min-height:110px;font-size:13px"></text
     <label class="fl">🙋 שלב 3 — מי מוסיפה?</label>
     <div class="og" style="grid-template-columns:repeat(4,1fr)" id="qAuGrid">
      <button class="ob" onclick="pickQAu(this,'נעם')"><span class="e">👧</span>נעם</button>
-     <button class="ob" onclick="pickQAu(this,'עמית')"><span class="e">👩</span>עמית</button>
+     <button class="ob" onclick="pickQAu(this,'עמית')"><span class="e">👦</span>עמית</button>
      <button class="ob" onclick="pickQAu(this,'רוי')"><span class="e">👩‍🍳</span>רוי</button>
      <button class="ob" onclick="pickQAu(this,'__f__')" style="border-style:dashed"><span class="e">🤝</span>חבר/ה</button>
     </div>
@@ -836,7 +836,7 @@ Bake at 180°C for 20 minutes..." style="min-height:110px;font-size:13px"></text
     <label class="fl">🙋 מי העלה?</label>
     <div class="og" style="grid-template-columns:repeat(4,1fr)" id="editAuGrid">
      <button class="ob" onclick="pickEditAu(this,'נעם')"><span class="e">👧</span>נעם</button>
-     <button class="ob" onclick="pickEditAu(this,'עמית')"><span class="e">👩</span>עמית</button>
+     <button class="ob" onclick="pickEditAu(this,'עמית')"><span class="e">👦</span>עמית</button>
      <button class="ob" onclick="pickEditAu(this,'רוי')"><span class="e">👩‍🍳</span>רוי</button>
      <button class="ob" onclick="pickEditAu(this,'__f__')" style="border-style:dashed"><span class="e">🤝</span>חבר/ה</button>
     </div>
@@ -1115,7 +1115,7 @@ function auColor(n){
 }
 function auEmoji(n){
   if(n==='נעם')  return '👧';
-  if(n==='עמית') return '👩';
+  if(n==='עמית') return '👦';
   if(n==='רוי')  return '👩‍🍳';
   return '🤝';
 }
@@ -1423,7 +1423,7 @@ function renderStats(){
   r.innerHTML=`
     <div class="stat"><strong>${recipes.length}</strong> מתכונים</div>
     ${n?`<div class="stat">👧 <strong>${n}</strong> נעם</div>`:''}
-    ${a?`<div class="stat">👩 <strong>${a}</strong> עמית</div>`:''}
+    ${a?`<div class="stat">👦 <strong>${a}</strong> עמית</div>`:''}
     ${ro?`<div class="stat">👩‍🍳 <strong>${ro}</strong> רוי</div>`:''}
     ${f?`<div class="stat">🤝 <strong>${f}</strong> חברים</div>`:''}
     ${tried?`<div class="stat">✅ <strong>${tried}</strong> ניסינו</div>`:''}
@@ -1680,7 +1680,7 @@ function viewR(idx){
 </div>
         <div class="rarow">
           <button class="rab" onclick="pickRA(this,'נעם')">👧 נעם</button>
-          <button class="rab" onclick="pickRA(this,'עמית')">👩 עמית</button>
+          <button class="rab" onclick="pickRA(this,'עמית')">👦 עמית</button>
           <button class="rab" onclick="pickRA(this,'רוי')">👩‍🍳 רוי</button>
           <button class="rab" onclick="pickRA(this,'__f__')" style="border-style:dashed">🤝 חבר/ה</button>
         </div>
@@ -1854,18 +1854,24 @@ function handleQImgDrop(e){
 }
 function setQImg(src){
   qImgData = src;
-  document.getElementById('qImgPreview').src = src;
-  document.getElementById('qImgPreview').style.display = 'block';
-  document.getElementById('qImgPlaceholder').style.display = 'none';
-  document.getElementById('qImgClear').style.display = 'block';
+  const prev = document.getElementById('qImgPreview');
+  const ph   = document.getElementById('qImgPlaceholder');
+  const clr  = document.getElementById('qImgClear');
+  if(prev){ prev.src=src; prev.style.display='block'; }
+  if(ph)  { ph.style.display='none'; }
+  if(clr) { clr.style.display='block'; }
+  toast('✅ תמונה נטענה!');
 }
 function clearQImg(){
   qImgData = '';
-  document.getElementById('qImgPreview').src = '';
-  document.getElementById('qImgPreview').style.display = 'none';
-  document.getElementById('qImgPlaceholder').style.display = 'block';
-  document.getElementById('qImgClear').style.display = 'none';
-  document.getElementById('qImgFile').value = '';
+  const prev = document.getElementById('qImgPreview');
+  const ph   = document.getElementById('qImgPlaceholder');
+  const clr  = document.getElementById('qImgClear');
+  const fi   = document.getElementById('qImgFile');
+  if(prev){ prev.src=''; prev.style.display='none'; }
+  if(ph)  { ph.style.display='block'; }
+  if(clr) { clr.style.display='none'; }
+  if(fi)  { fi.value=''; }
 }
 
 async function quickSave(){
@@ -2015,6 +2021,6 @@ async function manualBackup(){
   if(changed){save();render();}
 })();
 </script>
-<div class="version-badge">🍳 v2.5 — 30.3.2026</div>
+<div class="version-badge">🍳 v2.6 — 30.3.2026</div>
 </body>
 </html>
