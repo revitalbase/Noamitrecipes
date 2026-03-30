@@ -1570,18 +1570,38 @@ function onQuickUrlTyped(){
   }
 }
 
-function quickFetchThumb(){
+function showQThumb(src){
+  const preview = document.getElementById('qThumbPreview');
+  document.getElementById('qThumbImg').src = src;
+  preview.style.display = 'block';
+  preview.dataset.thumbUrl = src;
+}
+
+async function quickFetchThumb(){
   const url = document.getElementById('qUrlIn').value.trim();
   if(!url){ toast('❗ הדביקי לינק תחילה'); return; }
+  const btn = document.getElementById('qFetchBtn');
+  btn.disabled = true; btn.textContent = '⏳';
+
   const vid = ytId(url);
   if(vid){
-    const img = document.getElementById('qThumbImg');
-    img.src = `https://i.ytimg.com/vi/${vid}/mqdefault.jpg`;
-    document.getElementById('qThumbPreview').style.display = 'block';
+    showQThumb(`https://i.ytimg.com/vi/${vid}/mqdefault.jpg`);
+    btn.disabled = false; btn.textContent = '📸 שלוף';
     toast('✅ תמונה נשלפה!');
-  } else {
-    toast('💡 תמונה תישלף אוטומטית מאינסטגרם לאחר החילוץ');
+    return;
   }
+
+  // אינסטגרם/טיקטוק — microlink.io שולף og:image
+  try{
+    const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
+    const d = await res.json();
+    const img = d?.data?.image?.url || d?.data?.logo?.url || '';
+    if(img){ showQThumb(img); toast('✅ תמונה נשלפה!'); }
+    else { toast('💡 לא נמצאה תמונה — תוסיפי ידנית לאחר השמירה'); }
+  }catch(e){
+    toast('💡 לא הצלחתי לשלוף תמונה — תוסיפי ידנית לאחר השמירה');
+  }
+  btn.disabled = false; btn.textContent = '📸 שלוף';
 }
 
 async function quickSave(){
@@ -1621,7 +1641,8 @@ async function quickSave(){
   }
 
   const vid = ytId(url||'');
-  const thumb = vid ? `https://i.ytimg.com/vi/${vid}/mqdefault.jpg` : '';
+  const savedThumb = document.getElementById('qThumbPreview')?.dataset?.thumbUrl || '';
+  const thumb = vid ? `https://i.ytimg.com/vi/${vid}/mqdefault.jpg` : savedThumb;
   const r = {
     id: Date.now(),
     name: recipe.name || 'מתכון חדש',
@@ -1728,6 +1749,6 @@ async function manualBackup(){
   if(changed){save();render();}
 })();
 </script>
-<div class="version-badge">🍳 v1.3 — 30.3.2026</div>
+<div class="version-badge">🍳 v1.4 — 30.3.2026</div>
 </body>
 </html>
