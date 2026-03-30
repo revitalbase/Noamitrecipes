@@ -334,7 +334,10 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
       📂 <span class="txt">שחזור</span>
       <input type="file" accept=".json" id="importFile" onchange="importRecipes(event)" style="display:none"/>
     </label>
-    <button class="btn-add" onclick="openAdd()">＋ הוסיפי מתכון</button>
+    <div style="display:flex;gap:8px;align-items:center">
+    <button onclick="manualBackup()" title="גיבוי ידני" style="background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);color:#fff;border-radius:50px;padding:8px 14px;font-family:Heebo,sans-serif;font-size:13px;cursor:pointer;transition:.2s" onmouseover="this.style.background='rgba(255,255,255,.22)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">💾 גיבוי</button>
+    <button class="btn-add" onclick="openQuickAdd()">＋ הוסיפי מתכון</button>
+  </div>
   </div>
 </header>
 
@@ -529,6 +532,55 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
     <button class="btn-save" id="mainSaveBtn" onclick="saveUnified()">💾 שמרי מתכון</button>
    </div>
 
+  </div>
+ </div>
+</div>
+
+<!-- QUICK ADD MODAL — אינסטגרם מהיר -->
+<div class="overlay" id="quickModal">
+ <div class="modal" style="max-width:560px">
+  <div class="modal-hdr">
+   <button class="modal-x" onclick="closeModal('quickModal')">✕</button>
+   <h2>⚡ הוסיפי מתכון מהיר</h2>
+   <p>לינק + טקסט → שמירה בקליק אחד</p>
+  </div>
+  <div class="modal-body">
+   <!-- שלב 1: לינק -->
+   <div class="fg">
+    <label class="fl">🔗 שלב 1 — הדביקי לינק (אינסטגרם / יוטיוב / כל לינק)</label>
+    <div class="url-row">
+     <input class="fi" id="qUrlIn" placeholder="https://www.instagram.com/reel/..." oninput="onQuickUrlTyped()" />
+     <button class="btn-fetch" id="qFetchBtn" onclick="quickFetchThumb()">📸 שלוף</button>
+    </div>
+    <div id="qThumbPreview" style="display:none;margin-top:10px;border-radius:12px;overflow:hidden;border:1.5px solid var(--sage-l)">
+     <img id="qThumbImg" style="width:100%;height:140px;object-fit:cover;display:block" />
+    </div>
+   </div>
+   <!-- שלב 2: טקסט -->
+   <div class="fg">
+    <label class="fl">📋 שלב 2 — הדביקי טקסט מהפוסט / תגובה</label>
+    <div style="background:linear-gradient(135deg,#FFF4EE,#FFFBF5);border:1.5px solid var(--terra-l);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--brown);line-height:1.7;margin-bottom:8px">
+     אינסטגרם: פתחי פוסט ← לחצי <strong>"...עוד"</strong> ← העתיקי כל הטקסט ← הדביקי כאן
+    </div>
+    <textarea class="ft" id="qTextIn" rows="5" placeholder="הדביקי כאן את הטקסט — מרכיבים, שלבים, כל מה שיש...
+
+לדוגמה:
+1 cup flour, 2 eggs...
+Bake at 180°C for 20 minutes..." style="min-height:110px;font-size:13px"></textarea>
+   </div>
+   <!-- שלב 3: מי מוסיפה -->
+   <div class="fg">
+    <label class="fl">🙋 שלב 3 — מי מוסיפה?</label>
+    <div class="og" style="grid-template-columns:repeat(4,1fr)" id="qAuGrid">
+     <button class="ob" onclick="pickQAu(this,'נעם')"><span class="e">👧</span>נעם</button>
+     <button class="ob" onclick="pickQAu(this,'עמית')"><span class="e">👩</span>עמית</button>
+     <button class="ob" onclick="pickQAu(this,'רוי')"><span class="e">👩‍🍳</span>רוי</button>
+     <button class="ob" onclick="pickQAu(this,'__f__')" style="border-style:dashed"><span class="e">🤝</span>חבר/ה</button>
+    </div>
+    <div id="qFriendRow" style="display:none;margin-top:8px"><input class="fi" id="qFriendIn" placeholder="מה השם שלך?" oninput="qSelAu=this.value.trim()" /></div>
+   </div>
+   <!-- כפתור שמירה -->
+   <button class="btn-save" onclick="quickSave()" id="qSaveBtn">✨ חלצי ושמרי מתכון</button>
   </div>
  </div>
 </div>
@@ -1483,6 +1535,162 @@ function closeLb(){document.getElementById('lb').classList.remove('open');}
 
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
+// ── QUICK ADD (אינסטגרם מהיר) ──
+let qSelAu = '';
+
+function openQuickAdd(){
+  qSelAu = '';
+  document.getElementById('qUrlIn').value = '';
+  document.getElementById('qTextIn').value = '';
+  document.getElementById('qThumbPreview').style.display = 'none';
+  document.getElementById('qFriendRow').style.display = 'none';
+  document.querySelectorAll('#qAuGrid .ob').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('quickModal').classList.add('open');
+  setTimeout(()=>document.getElementById('qUrlIn').focus(), 200);
+}
+
+function pickQAu(btn, v){
+  document.querySelectorAll('#qAuGrid .ob').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const row = document.getElementById('qFriendRow');
+  if(v==='__f__'){ qSelAu=''; row.style.display='block'; document.getElementById('qFriendIn').focus(); }
+  else { qSelAu=v; row.style.display='none'; }
+}
+
+function onQuickUrlTyped(){
+  const url = document.getElementById('qUrlIn').value.trim();
+  const vid = ytId(url);
+  const preview = document.getElementById('qThumbPreview');
+  const img = document.getElementById('qThumbImg');
+  if(vid){
+    img.src = `https://i.ytimg.com/vi/${vid}/mqdefault.jpg`;
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+function quickFetchThumb(){
+  const url = document.getElementById('qUrlIn').value.trim();
+  if(!url){ toast('❗ הדביקי לינק תחילה'); return; }
+  const vid = ytId(url);
+  if(vid){
+    const img = document.getElementById('qThumbImg');
+    img.src = `https://i.ytimg.com/vi/${vid}/mqdefault.jpg`;
+    document.getElementById('qThumbPreview').style.display = 'block';
+    toast('✅ תמונה נשלפה!');
+  } else {
+    toast('💡 תמונה תישלף אוטומטית מאינסטגרם לאחר החילוץ');
+  }
+}
+
+async function quickSave(){
+  const url = document.getElementById('qUrlIn').value.trim();
+  const text = document.getElementById('qTextIn').value.trim();
+  if(!text && !url){ toast('❗ הדביקי לינק או טקסט'); return; }
+  if(!qSelAu){ toast('❗ בחרי מי מוסיפה'); return; }
+
+  const btn = document.getElementById('qSaveBtn');
+  const ov = document.getElementById('procOverlay');
+  const msg = document.getElementById('procMsg');
+  btn.disabled = true;
+  ov.style.display = 'flex';
+  msg.textContent = 'מחלץ ומתרגם מתכון... ✨';
+
+  const cats = 'אוכל ביתי/קינוחים/אסיאתי/ראשונות/עיקריות/לחמים ומאפים/שתייה/מרקים/סלטים/ארוחת בוקר/ביס מהיר/נשנושים/ליד האוכל/רוצים לנסות';
+  const rules = `תרגם לעברית. המר מידות: 1cup=240מ"ל,1oz=28ג,1lb=454ג,°F→°C=(F-32)/1.8,tbsp=כף,tsp=כפית. החזר JSON בלבד ללא גרשיים נוספים: {"name":"שם","category":"מתוך: ${cats}","prepTime":"X דקות","servings":"X מנות","ingredients":["מצרך","..."],"steps":["שלב","..."]}`;
+
+  const content = text
+    ? `חלץ מתכון מהטקסט הבא:\n\n${text.substring(0,5000)}\n\n${url ? 'הלינק המקורי: ' + url : ''}\n\n${rules}`
+    : `נסה לזהות מתכון מהלינק הבא: ${url}\n\n${rules}`;
+
+  let recipe = null;
+  try{
+    const res = await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,
+        messages:[{role:'user',content}]})});
+    const d = await res.json();
+    if(d.error) throw new Error(d.error.message);
+    const txt = d.content[0].text.trim().replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'').trim();
+    recipe = JSON.parse(txt);
+  }catch(e){
+    ov.style.display = 'none';
+    btn.disabled = false;
+    toast('❌ שגיאה: ' + e.message.substring(0,60));
+    return;
+  }
+
+  const vid = ytId(url||'');
+  const thumb = vid ? `https://i.ytimg.com/vi/${vid}/mqdefault.jpg` : '';
+  const r = {
+    id: Date.now(),
+    name: recipe.name || 'מתכון חדש',
+    url: url || '',
+    category: recipe.category || 'רוצים לנסות',
+    author: qSelAu,
+    notes: '',
+    ingredients: (recipe.ingredients||[]).join('\n'),
+    steps: (recipe.steps||[]).join('\n'),
+    prepTime: recipe.prepTime || '',
+    servings: recipe.servings || '',
+    thumb,
+    image: '',
+    ratings: [],
+    cookedPhotos: [],
+    date: new Date().toLocaleDateString('he-IL')
+  };
+
+  recipes.unshift(r);
+  save();
+  render();
+  closeModal('quickModal');
+  ov.style.display = 'none';
+  btn.disabled = false;
+  toast(`🎉 "${r.name}" נשמר!`);
+}
+
+// ── גיבוי אוטומטי יומי ──
+async function autoBackup(){
+  if(!recipes || recipes.length < 2) return;
+  const lastKey = 'mtr2_last_backup';
+  const today = new Date().toDateString();
+  const lastBackup = localStorage.getItem(lastKey);
+  if(lastBackup === today) return; // כבר גובה היום
+  try{
+    const sb = await initSupabase();
+    if(!sb) return;
+    const json = JSON.stringify(recipes);
+    const dateStr = new Date().toISOString().slice(0,10);
+    await sb.from('recipes')
+      .upsert({id:`backup_${dateStr}`, data:json, updated_at: new Date().toISOString()}, {onConflict:'id'});
+    localStorage.setItem(lastKey, today);
+    console.log('✅ גיבוי אוטומטי יומי הושלם —', recipes.length, 'מתכונים');
+  }catch(e){ console.log('גיבוי אוטומטי נכשל:', e); }
+}
+
+async function manualBackup(){
+  if(!recipes || !recipes.length){ toast('אין מתכונים לגיבוי'); return; }
+  // שמור גם כקובץ JSON
+  const data = JSON.stringify(recipes, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const a = document.createElement('a');
+  const date = new Date().toLocaleDateString('he-IL').replace(/\./g,'-');
+  a.href = URL.createObjectURL(blob);
+  a.download = `מתכונים-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  // גם שמור ל-Supabase
+  try{
+    const sb = await initSupabase();
+    if(sb){
+      const dateStr = new Date().toISOString().slice(0,10);
+      await sb.from('recipes')
+        .upsert({id:`backup_${dateStr}`, data:JSON.stringify(recipes), updated_at: new Date().toISOString()}, {onConflict:'id'});
+    }
+  }catch(e){}
+  toast(`💾 ${recipes.length} מתכונים גובו בהצלחה!`);
+}
+
 // ── INIT ──
 (async()=>{
   // Always load from Supabase first (cloud = source of truth)
@@ -1504,6 +1712,9 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
 
   render();
 
+  // גיבוי אוטומטי יומי (אחרי טעינה)
+  setTimeout(autoBackup, 5000);
+
   // Auto-fetch YouTube titles
   let changed=false;
   for(const r of recipes){
@@ -1517,6 +1728,6 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
   if(changed){save();render();}
 })();
 </script>
-<div class="version-badge">🍳 v1.2 — 26.3.2026</div>
+<div class="version-badge">🍳 v1.3 — 30.3.2026</div>
 </body>
 </html>
