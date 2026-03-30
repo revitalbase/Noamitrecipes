@@ -1672,21 +1672,23 @@ async function quickSave(){
 
 // ── גיבוי אוטומטי יומי ──
 async function autoBackup(){
-  if(!recipes || recipes.length < 2) return;
+  if(!recipes || !recipes.length) return;
   const lastKey = 'mtr2_last_backup';
-  const today = new Date().toDateString();
-  const lastBackup = localStorage.getItem(lastKey);
-  if(lastBackup === today) return; // כבר גובה היום
+  const now = Date.now();
+  const lastBackup = parseInt(localStorage.getItem(lastKey) || '0');
+  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+  if(now - lastBackup < TWENTY_FOUR_HOURS) return; // גובה כל 24 שעות מדויק
   try{
     const sb = await initSupabase();
-    if(!sb) return;
+    if(!sb){ console.log('⚠️ גיבוי אוטומטי: אין Supabase'); return; }
     const json = JSON.stringify(recipes);
     const dateStr = new Date().toISOString().slice(0,10);
-    await sb.from('recipes')
+    const { error } = await sb.from('recipes')
       .upsert({id:`backup_${dateStr}`, data:json, updated_at: new Date().toISOString()}, {onConflict:'id'});
-    localStorage.setItem(lastKey, today);
-    console.log('✅ גיבוי אוטומטי יומי הושלם —', recipes.length, 'מתכונים');
-  }catch(e){ console.log('גיבוי אוטומטי נכשל:', e); }
+    if(error){ console.error('❌ גיבוי אוטומטי נכשל:', error); return; }
+    localStorage.setItem(lastKey, String(now));
+    console.log('✅ גיבוי אוטומטי הושלם —', recipes.length, 'מתכונים —', new Date().toLocaleString('he-IL'));
+  }catch(e){ console.log('❌ גיבוי אוטומטי נכשל:', e.message); }
 }
 
 async function manualBackup(){
@@ -1749,6 +1751,6 @@ async function manualBackup(){
   if(changed){save();render();}
 })();
 </script>
-<div class="version-badge">🍳 v1.4 — 30.3.2026</div>
+<div class="version-badge">🍳 v1.5 — 30.3.2026</div>
 </body>
 </html>
