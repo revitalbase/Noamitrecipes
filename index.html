@@ -69,13 +69,14 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;}
 
 /* ── HOME SECTIONS ── */
-.home-section{margin-bottom:44px;}
-.section-hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;}
-.section-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--dark);font-weight:700;}
-.section-link{font-size:13px;color:var(--terra);font-weight:600;cursor:pointer;transition:.2s;text-decoration:none;display:flex;align-items:center;gap:4px;}
-.section-link:hover{color:var(--terra-l);}
-.section-divider{height:2px;background:linear-gradient(to left,var(--terra),var(--border),transparent);margin-bottom:22px;border:none;}
-.section-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;}
+.home-section{margin-bottom:52px;padding-bottom:10px;}
+.home-section:last-child{margin-bottom:20px;}
+.section-hdr{margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid var(--border);}
+.section-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--dark);font-weight:700;margin-bottom:2px;}
+.section-sub{font-size:13px;color:var(--muted);font-weight:400;}
+.section-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+@media(max-width:960px){.section-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.section-grid{grid-template-columns:1fr;}}
 
 /* ── CARD ── */
 .card{background:var(--warm);border-radius:18px;overflow:hidden;border:1px solid var(--border);box-shadow:0 2px 12px var(--shadow);cursor:pointer;transition:.25s;animation:up .4s ease both;display:flex;flex-direction:column;}
@@ -686,34 +687,50 @@ async function initSupabase(){
 }
 
 function save(){
-  // ── PROTECTION: never overwrite cloud with empty list ──
   if(!recipes || recipes.length === 0){
-    console.warn('🛡️ save() blocked — recipes is empty');
+    console.warn('🛡️ save() blocked — empty');
     return;
   }
-  const json = JSON.stringify(recipes);
-  const sizeMB = (json.length / (1024*1024)).toFixed(1);
-  // Save to localStorage immediately (always works)
-  try{ localStorage.setItem(DB_KEY, json); }catch(e){
-    console.error('❌ localStorage save failed:', e);
+  const fullJson = JSON.stringify(recipes);
+
+  // 1. Always save FULL data to localStorage (includes images)
+  try{ localStorage.setItem(DB_KEY, fullJson); }catch(e){
+    console.error('localStorage save failed:', e);
   }
-  // Save to Supabase (cloud)
+
+  // 2. For Supabase: strip heavy base64 images to keep under size limit
+  const light = recipes.map(r=>{
+    const c = Object.assign({}, r);
+    // Strip uploaded base64 images (keep URL thumbs)
+    if(c.image && c.image.startsWith('data:')) c.image = '__local__';
+    if(c.cookedPhotos && c.cookedPhotos.length){
+      c.cookedPhotos = c.cookedPhotos.map(p=>
+        (p.data && p.data.startsWith('data:'))
+          ? Object.assign({}, p, {data:'__local__'})
+          : p
+      );
+    }
+    return c;
+  });
+  const cloudJson = JSON.stringify(light);
+  const sizeKB = (cloudJson.length/1024).toFixed(0);
+
   initSupabase().then(sb=>{
     if(!sb){ console.log('⚠️ No Supabase'); return; }
-    console.log(`💾 Saving ${recipes.length} recipes (${sizeMB}MB)...`);
+    console.log(`💾 Saving ${recipes.length} recipes (${sizeKB}KB cloud)...`);
     sb.from('recipes')
-      .upsert({id:'shared', data:json, updated_at: new Date().toISOString()}, {onConflict:'id'})
+      .upsert({id:'shared', data:cloudJson, updated_at: new Date().toISOString()}, {onConflict:'id'})
       .then(({error})=>{
         if(error){
           console.error('❌ Save error:', error);
-          toast('⚠️ שגיאה בשמירה לענן — המתכונים שמורים מקומית. נסי לגבות!');
+          toast('⚠️ שמירה לענן נכשלה! נסי גיבוי ידני (💾)');
         } else {
-          console.log('✅ Saved to Supabase!');
+          console.log('✅ Saved to Supabase OK');
         }
       })
       .catch(e=>{
-        console.error('❌ Save failed:', e);
-        toast('⚠️ שגיאה בשמירה לענן — המתכונים שמורים מקומית');
+        console.error('❌ Save exception:', e);
+        toast('⚠️ שמירה לענן נכשלה!');
       });
   });
 }
@@ -722,7 +739,7 @@ async function loadRecipes(){
   let cloudData = null;
   let localData = null;
 
-  // Try Supabase
+  // 1. Try Supabase
   const sb = await initSupabase();
   if(sb){
     try{
@@ -734,39 +751,61 @@ async function loadRecipes(){
     }catch(e){ console.log('Cloud load error:', e); }
   }
 
-  // Try localStorage
+  // 2. Try localStorage
   try{
     const local = localStorage.getItem(DB_KEY);
     if(local){ const p=JSON.parse(local); if(Array.isArray(p)) localData = p; }
   }catch(e){}
 
-  // ── SMART MERGE: use whichever has MORE recipes ──
+  // 3. Decide which source to use
+  let result = null;
+
   if(cloudData && localData){
+    // Use whichever has MORE recipes
     if(localData.length > cloudData.length){
-      // localStorage has more — cloud save probably failed last time
-      console.warn(`⚠️ localStorage (${localData.length}) > cloud (${cloudData.length}) — using local & syncing`);
-      // Try to push local data to cloud now
-      try{
-        const json = JSON.stringify(localData);
-        if(sb) sb.from('recipes').upsert({id:'shared', data:json, updated_at: new Date().toISOString()}, {onConflict:'id'})
-          .then(({error})=>{
-            if(!error) console.log('✅ Cloud synced from localStorage!');
-            else console.error('❌ Sync failed:', error);
-          });
-      }catch(e){}
-      return localData;
+      console.log(`📱 Using localStorage (${localData.length}) > cloud (${cloudData.length})`);
+      result = localData;
+    } else {
+      console.log(`☁️ Using cloud (${cloudData.length})`);
+      result = cloudData;
     }
-    // Cloud has same or more — use cloud (source of truth)
-    try{ localStorage.setItem(DB_KEY, JSON.stringify(cloudData)); }catch(e){}
-    return cloudData;
+  } else if(cloudData){
+    result = cloudData;
+  } else if(localData){
+    result = localData;
+  } else {
+    return [];
   }
 
-  if(cloudData){
-    try{ localStorage.setItem(DB_KEY, JSON.stringify(cloudData)); }catch(e){}
-    return cloudData;
+  // 4. Merge: restore local images into cloud recipes
+  if(localData && result === cloudData){
+    const localMap = {};
+    localData.forEach(r=>{ localMap[r.id] = r; });
+    result.forEach(r=>{
+      const lr = localMap[r.id];
+      if(!lr) return;
+      // Restore base64 images that were stripped for cloud
+      if(r.image === '__local__' && lr.image && lr.image.startsWith('data:')) r.image = lr.image;
+      if(r.cookedPhotos && lr.cookedPhotos){
+        r.cookedPhotos.forEach((p,i)=>{
+          if(p.data === '__local__' && lr.cookedPhotos[i] && lr.cookedPhotos[i].data.startsWith('data:'))
+            p.data = lr.cookedPhotos[i].data;
+        });
+      }
+    });
   }
-  if(localData) return localData;
-  return [];
+
+  // 5. Update localStorage with merged result
+  try{ localStorage.setItem(DB_KEY, JSON.stringify(result)); }catch(e){}
+
+  // 6. If we used local data because cloud was behind, try to sync cloud now
+  if(result === localData && cloudData && localData.length > cloudData.length){
+    console.log('🔄 Syncing local → cloud...');
+    // Re-save will strip images and push to cloud
+    setTimeout(()=>save(), 500);
+  }
+
+  return result;
 }
 
 let recipes = [];
@@ -1280,15 +1319,16 @@ function renderCard(r, ri){
     </div>`;
 }
 
-function makeSection(title, items, linkText, linkAction){
+function makeSection(title, subtitle, items){
   if(!items.length) return '';
   return `
   <div class="home-section">
     <div class="section-hdr">
-      <span class="section-title">${title}</span>
-      ${linkText?`<a class="section-link" onclick="${linkAction||''}">${linkText} ←</a>`:''}
+      <div>
+        <div class="section-title">${title}</div>
+        <div class="section-sub">${subtitle}</div>
+      </div>
     </div>
-    <hr class="section-divider">
     <div class="section-grid">
       ${items.map((r,i)=>renderCard(r,i)).join('')}
     </div>
@@ -1314,23 +1354,26 @@ function render(){
   }
 
   // ── HOME: sectioned layout ──
-  // 1. New recipes = last 6 added (first in array = newest)
-  const newOnes = list.slice(0, 6);
-  const newIds = new Set(newOnes.map(r=>r.id));
+  const usedIds = new Set();
 
-  // 2. Recommended = tried + has ratings, sorted by avg rating desc
+  // 1. המומלצים שלנו — tried + rated, top 6 by rating
   const recommended = list
-    .filter(r=> !newIds.has(r.id) && r.tried===true && (r.ratings||[]).length>0)
-    .sort((a,b)=>(avgR(b)||0)-(avgR(a)||0));
-  const recIds = new Set(recommended.map(r=>r.id));
+    .filter(r=> r.tried===true && (r.ratings||[]).length>0)
+    .sort((a,b)=>(avgR(b)||0)-(avgR(a)||0))
+    .slice(0, 6);
+  recommended.forEach(r=>usedIds.add(r.id));
 
-  // 3. Rest = everything else
-  const rest = list.filter(r=> !newIds.has(r.id) && !recIds.has(r.id));
+  // 2. חדשים — last 6 added (excluding already shown)
+  const newOnes = list.filter(r=> !usedIds.has(r.id)).slice(0, 6);
+  newOnes.forEach(r=>usedIds.add(r.id));
+
+  // 3. כל המתכונים — everything else
+  const rest = list.filter(r=> !usedIds.has(r.id));
 
   let html = '';
-  html += makeSection('מתכונים חדשים', newOnes);
-  html += makeSection('המומלצים שלנו', recommended);
-  html += makeSection('עוד מתכונים', rest);
+  html += makeSection('המומלצים שלנו', 'המתכונים שניסינו — לפי דירוג כוכבים ⭐', recommended);
+  html += makeSection('חדשים שלנו', '6 המתכונים האחרונים שעלו 🆕', newOnes);
+  html += makeSection('כל המתכונים', 'כל שאר המתכונים 🍽️', rest);
 
   g.innerHTML = html;
   renderStats();
