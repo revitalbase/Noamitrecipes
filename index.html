@@ -691,44 +691,86 @@ async function initSupabase(){
 }
 
 function save(){
+  // ── PROTECTION: never overwrite cloud with empty list ──
+  if(!recipes || recipes.length === 0){
+    console.warn('🛡️ save() blocked — recipes is empty');
+    return;
+  }
   const json = JSON.stringify(recipes);
-  // Save to localStorage immediately (for offline fallback)
-  try{ localStorage.setItem(DB_KEY, json); }catch(e){}
-  // Save to Supabase (cloud = master)
+  const sizeMB = (json.length / (1024*1024)).toFixed(1);
+  // Save to localStorage immediately (always works)
+  try{ localStorage.setItem(DB_KEY, json); }catch(e){
+    console.error('❌ localStorage save failed:', e);
+  }
+  // Save to Supabase (cloud)
   initSupabase().then(sb=>{
     if(!sb){ console.log('⚠️ No Supabase'); return; }
-    console.log('💾 Saving', recipes.length, 'recipes...');
+    console.log(`💾 Saving ${recipes.length} recipes (${sizeMB}MB)...`);
     sb.from('recipes')
       .upsert({id:'shared', data:json, updated_at: new Date().toISOString()}, {onConflict:'id'})
       .then(({error})=>{
-        if(error) console.error('❌ Save error:', error);
-        else console.log('✅ Saved to Supabase!');
+        if(error){
+          console.error('❌ Save error:', error);
+          toast('⚠️ שגיאה בשמירה לענן — המתכונים שמורים מקומית. נסי לגבות!');
+        } else {
+          console.log('✅ Saved to Supabase!');
+        }
       })
-      .catch(e=>console.error('❌ Save failed:', e));
+      .catch(e=>{
+        console.error('❌ Save failed:', e);
+        toast('⚠️ שגיאה בשמירה לענן — המתכונים שמורים מקומית');
+      });
   });
 }
 
 async function loadRecipes(){
-  // Always try Supabase first — it's the source of truth
+  let cloudData = null;
+  let localData = null;
+
+  // Try Supabase
   const sb = await initSupabase();
   if(sb){
     try{
       const {data, error} = await sb.from('recipes').select('data').eq('id','shared').single();
       if(!error && data && data.data){
         const parsed = JSON.parse(data.data);
-        if(Array.isArray(parsed)){
-          // Update localStorage to match Supabase
-          try{ localStorage.setItem(DB_KEY, data.data); }catch(e){}
-          return parsed;
-        }
+        if(Array.isArray(parsed)) cloudData = parsed;
       }
-    }catch(e){}
+    }catch(e){ console.log('Cloud load error:', e); }
   }
-  // Fallback: localStorage (offline mode)
+
+  // Try localStorage
   try{
     const local = localStorage.getItem(DB_KEY);
-    if(local){ const p=JSON.parse(local); if(Array.isArray(p)) return p; }
+    if(local){ const p=JSON.parse(local); if(Array.isArray(p)) localData = p; }
   }catch(e){}
+
+  // ── SMART MERGE: use whichever has MORE recipes ──
+  if(cloudData && localData){
+    if(localData.length > cloudData.length){
+      // localStorage has more — cloud save probably failed last time
+      console.warn(`⚠️ localStorage (${localData.length}) > cloud (${cloudData.length}) — using local & syncing`);
+      // Try to push local data to cloud now
+      try{
+        const json = JSON.stringify(localData);
+        if(sb) sb.from('recipes').upsert({id:'shared', data:json, updated_at: new Date().toISOString()}, {onConflict:'id'})
+          .then(({error})=>{
+            if(!error) console.log('✅ Cloud synced from localStorage!');
+            else console.error('❌ Sync failed:', error);
+          });
+      }catch(e){}
+      return localData;
+    }
+    // Cloud has same or more — use cloud (source of truth)
+    try{ localStorage.setItem(DB_KEY, JSON.stringify(cloudData)); }catch(e){}
+    return cloudData;
+  }
+
+  if(cloudData){
+    try{ localStorage.setItem(DB_KEY, JSON.stringify(cloudData)); }catch(e){}
+    return cloudData;
+  }
+  if(localData) return localData;
   return [];
 }
 
@@ -799,12 +841,29 @@ function clearPdf(){
   document.getElementById('rawText').placeholder='הדביקי כאן טקסט — מאינסטגרם, מאתר, מאנגלית, צרפתית, ערבית, כל שפה...';
 }
 
+// ── IMAGE COMPRESSION — keep data small for Supabase ──
+function compressImage(dataUrl, maxW, quality){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width, h=img.height;
+      if(w>maxW){ h=Math.round(h*(maxW/w)); w=maxW; }
+      const c=document.createElement('canvas');
+      c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg', quality||0.7));
+    };
+    img.onerror=()=>resolve(dataUrl); // fallback to original
+    img.src=dataUrl;
+  });
+}
+
 function handleAddImage(e){
   const f=e.target.files[0]; if(!f)return;
   if(f.size>10*1024*1024){toast('❗ תמונה גדולה מדי (עד 10MB)');return;}
   const rd=new FileReader();
-  rd.onload=ev=>{
-    pendImage=ev.target.result;
+  rd.onload=async ev=>{
+    pendImage=await compressImage(ev.target.result, 800, 0.7);
     document.getElementById('imgPreviewSrc').src=pendImage;
     document.getElementById('imgUploadEmpty').style.display='none';
     document.getElementById('imgUploadPreview').style.display='block';
@@ -1732,8 +1791,8 @@ function saveRating(recipeId){
   recipes[idx].ratings.push({stars:tStars,author:rAu,note,date:new Date().toLocaleDateString('he-IL')});
   save();render();viewR(idx);toast('⭐ הדירוג נשמר!');
 }
-function changeThumb(e,idx){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=ev=>{recipes[idx].image=ev.target.result;save();render();toast('✅ תמונה עודכנה!');};rd.readAsDataURL(f);}
-function addCooked(e,idx){const f=e.target.files[0];if(!f)return;const who=prompt('מי מעלה? (נעם / עמית / שם)')||'אנונימי';const rd=new FileReader();rd.onload=ev=>{if(!recipes[idx].cookedPhotos)recipes[idx].cookedPhotos=[];recipes[idx].cookedPhotos.push({data:ev.target.result,author:who,date:new Date().toLocaleDateString('he-IL')});save();render();viewR(idx);toast('📸 תמונה נוספה!');};rd.readAsDataURL(f);}
+function changeThumb(e,idx){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=async ev=>{recipes[idx].image=await compressImage(ev.target.result,800,0.7);save();render();toast('✅ תמונה עודכנה!');};rd.readAsDataURL(f);}
+function addCooked(e,idx){const f=e.target.files[0];if(!f)return;const who=prompt('מי מעלה? (נעם / עמית / שם)')||'אנונימי';const rd=new FileReader();rd.onload=async ev=>{if(!recipes[idx].cookedPhotos)recipes[idx].cookedPhotos=[];recipes[idx].cookedPhotos.push({data:await compressImage(ev.target.result,800,0.7),author:who,date:new Date().toLocaleDateString('he-IL')});save();render();viewR(idx);toast('📸 תמונה נוספה!');};rd.readAsDataURL(f);}
 function markDone(idx){const cats=['קינוחים','אסיאתי','ראשונות','עיקריות','לחמים ומאפים','שתייה','מרקים','סלטים','ארוחת בוקר','ביס מהיר'];const c=prompt(`איזו קטגוריה?\n${cats.join(' / ')}`,'עיקריות')||'עיקריות';recipes[idx].category=c;save();render();toast(`🎉 עבר לקטגוריית "${c}"!`);}
 function delR(recipeId){
   const idx=recipes.findIndex(r=>r.id===recipeId);
