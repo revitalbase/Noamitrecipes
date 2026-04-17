@@ -292,6 +292,14 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
   .btn-backup span.txt{display:none;}
 }
 
+/* bookmarklet tip toggle */
+#bookmarkletTip.bm-open .bm-details{display:block!important;}
+#bookmarkletTip.bm-open #bmArrow{transform:rotate(180deg);}
+
+/* image upload zone */
+.img-upload-zone{background:var(--cream);border:2px dashed var(--border);border-radius:13px;overflow:hidden;transition:.2s;}
+.img-upload-zone:hover{border-color:var(--sage);}
+
 /* version badge */
 .version-badge{
   position:fixed;bottom:14px;left:14px;
@@ -338,7 +346,6 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
       <input type="file" accept=".json" id="importFile" onchange="importRecipes(event)" style="display:none"/>
     </label>
     <button class="btn-add" onclick="openAdd()">＋ הוסיפי מתכון</button>
-  <button class="btn-backup" onclick="showBookmarkletHelp()" title="קיצור דרך לאינסטגרם" style="font-size:16px;padding:8px 12px">📌</button>
   </div>
 </header>
 
@@ -418,6 +425,30 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
        style="width:100%;margin-top:10px;background:linear-gradient(135deg,var(--terra),var(--mustard));color:#fff;border:none;border-radius:12px;padding:14px;font-family:Heebo,sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
       ✨ חלצי מתכון אוטומטי
      </button>
+    </div>
+
+    <!-- Bookmarklet tip -->
+    <div id="bookmarkletTip" style="margin-bottom:16px;background:linear-gradient(135deg,#f5f0ff,#f0f7ff);border:1.5px solid #c9b8e8;border-radius:14px;overflow:hidden">
+      <button onclick="this.parentElement.classList.toggle('bm-open')" style="width:100%;background:none;border:none;padding:13px 16px;display:flex;align-items:center;gap:8px;cursor:pointer;font-family:Heebo,sans-serif;font-size:13px;color:#6B4C8A;font-weight:600;text-align:right">
+        <span>📌</span> קיצור דרך — שליפה אוטומטית מאינסטגרם
+        <span style="margin-right:auto;font-size:10px;color:#9b8ab8" id="bmArrow">▼</span>
+      </button>
+      <div class="bm-details" style="display:none;padding:0 16px 16px">
+        <p style="font-size:12px;color:#6B4C8A;line-height:1.7;margin-bottom:12px">
+          גרירת הכפתור הבא לסרגל הסימניות בדפדפן — ואז לחיצה עליו בכל פוסט אינסטגרם תפתח את האתר עם הטקסט אוטומטית!
+        </p>
+        <div style="text-align:center;margin-bottom:12px">
+          <a id="bookmarkletBtn" draggable="true"
+             style="display:inline-block;background:linear-gradient(135deg,var(--terra),var(--mustard));color:#fff;text-decoration:none;border-radius:50px;padding:10px 22px;font-family:Heebo,sans-serif;font-size:14px;font-weight:700;box-shadow:0 3px 12px rgba(201,96,58,.35);cursor:grab"
+             onclick="event.preventDefault();alert('גרירי אותי לסרגל הסימניות! אל תלחצי עלי כאן.')">
+            🍳 שלוף מתכון
+          </a>
+          <div style="font-size:10px;color:#9b8ab8;margin-top:6px">← גרירי לסרגל הסימניות</div>
+        </div>
+        <div style="background:rgba(255,255,255,.6);border-radius:10px;padding:10px 12px;font-size:11px;color:#6B4C8A;line-height:1.8">
+          <strong>איך:</strong> 1. גרירי את הכפתור למעלה &nbsp;2. פתחי פוסט באינסטגרם &nbsp;3. לחצי על הסימנייה &nbsp;4. ✨ מוכן!
+        </div>
+      </div>
     </div>
 
     <div class="fg"><label class="fl">📝 שם המתכון</label><input class="fi" id="nameIn" placeholder="למשל: פסטה קרמית עם עגבניות שרי" /></div>
@@ -501,6 +532,22 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 
    <!-- ── SHARED: WHO + CATEGORY + SAVE ── -->
    <div id="sharedSection" style="margin-top:20px;padding-top:20px;border-top:2px solid var(--border)">
+    <!-- Image upload -->
+    <div class="fg">
+     <label class="fl">📸 תמונה (אופציונלי)</label>
+     <div id="imgUploadArea" class="img-upload-zone">
+      <input type="file" accept="image/*" id="addImageIn" onchange="handleAddImage(event)" style="display:none" />
+      <div id="imgUploadEmpty" onclick="document.getElementById('addImageIn').click()" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px">
+        <span style="font-size:32px">📷</span>
+        <span style="font-size:13px;color:var(--muted);font-weight:600">לחצי להוספת תמונה</span>
+        <span style="font-size:11px;color:var(--border)">JPG, PNG, WEBP</span>
+      </div>
+      <div id="imgUploadPreview" style="display:none;position:relative">
+        <img id="imgPreviewSrc" style="width:100%;max-height:180px;object-fit:cover;border-radius:11px;display:block" />
+        <button onclick="clearAddImage()" style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" title="הסירי תמונה">✕</button>
+      </div>
+     </div>
+    </div>
     <div class="fg">
      <label class="fl">🏷️ קטגוריה</label>
      <div class="og" id="catGrid">
@@ -672,7 +719,7 @@ async function loadRecipes(){
 }
 
 let recipes = [];
-let curCat='all', curQ='', selAu='', selCat='', pendThumb='';
+let curCat='all', curQ='', selAu='', selCat='', pendThumb='', pendImage='';
 let tStars=0, rAu='';
 let selLang='auto';
 let videoFileData = null;
@@ -691,7 +738,7 @@ function saveFromVideo(){
   const ings=[...document.querySelectorAll('#ingListV .ing-item input')].map(i=>i.value.trim()).filter(Boolean);
   const steps=[...document.querySelectorAll('#stepsListV .step-item textarea')].map(t=>t.value.trim()).filter(Boolean);
   const srcUrlV=(document.getElementById('resUrlV')&&document.getElementById('resUrlV').value.trim())||'';
-  const r={id:Date.now(),name,url:srcUrlV,category:selCat,author:selAu,notes:'חולץ מוידאו 🎬',ingredients:ings.join('\n'),steps:steps.join('\n'),prepTime:document.getElementById('resTimeV').value.trim(),servings:document.getElementById('resServV').value.trim(),thumb:'',image:'',ratings:[],cookedPhotos:[],date:new Date().toLocaleDateString('he-IL')};
+  const r={id:Date.now(),name,url:srcUrlV,category:selCat,author:selAu,notes:'חולץ מוידאו 🎬',ingredients:ings.join('\n'),steps:steps.join('\n'),prepTime:document.getElementById('resTimeV').value.trim(),servings:document.getElementById('resServV').value.trim(),thumb:'',image:pendImage||'',ratings:[],cookedPhotos:[],date:new Date().toLocaleDateString('he-IL')};
   recipes.unshift(r);save();closeModal('addModal');render();toast(`🎉 "${name}" נשמר!`);
 }
 
@@ -736,6 +783,29 @@ function clearPdf(){
   document.getElementById('pdfFileIn').value='';
   document.getElementById('textLabel').textContent='או הדביקי טקסט ישירות (בכל שפה)';
   document.getElementById('rawText').placeholder='הדביקי כאן טקסט — מאינסטגרם, מאתר, מאנגלית, צרפתית, ערבית, כל שפה...';
+}
+
+function handleAddImage(e){
+  const f=e.target.files[0]; if(!f)return;
+  if(f.size>10*1024*1024){toast('❗ תמונה גדולה מדי (עד 10MB)');return;}
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    pendImage=ev.target.result;
+    document.getElementById('imgPreviewSrc').src=pendImage;
+    document.getElementById('imgUploadEmpty').style.display='none';
+    document.getElementById('imgUploadPreview').style.display='block';
+    document.querySelector('.img-upload-zone').style.borderStyle='solid';
+    document.querySelector('.img-upload-zone').style.borderColor='var(--sage)';
+  };
+  rd.readAsDataURL(f);
+}
+function clearAddImage(){
+  pendImage='';
+  document.getElementById('addImageIn').value='';
+  document.getElementById('imgUploadEmpty').style.display='flex';
+  document.getElementById('imgUploadPreview').style.display='none';
+  document.querySelector('.img-upload-zone').style.borderStyle='dashed';
+  document.querySelector('.img-upload-zone').style.borderColor='var(--border)';
 }
 
 async function extractFromText(){
@@ -838,7 +908,7 @@ function saveFromText(){
   const ings=[...document.querySelectorAll('#ingList .ing-item input')].map(i=>i.value.trim()).filter(Boolean);
   const steps=[...document.querySelectorAll('#stepsList .step-item textarea')].map(t=>t.value.trim()).filter(Boolean);
   const srcUrl=(document.getElementById('resUrl')&&document.getElementById('resUrl').value.trim())||'';
-  const r={id:Date.now(),name,url:srcUrl,category:selCat,author:selAu,notes:'חולץ מטקסט',ingredients:ings.join('\n'),steps:steps.join('\n'),prepTime:document.getElementById('resTime').value.trim(),servings:document.getElementById('resServ').value.trim(),thumb:'',image:'',ratings:[],cookedPhotos:[],date:new Date().toLocaleDateString('he-IL')};
+  const r={id:Date.now(),name,url:srcUrl,category:selCat,author:selAu,notes:'חולץ מטקסט',ingredients:ings.join('\n'),steps:steps.join('\n'),prepTime:document.getElementById('resTime').value.trim(),servings:document.getElementById('resServ').value.trim(),thumb:'',image:pendImage||'',ratings:[],cookedPhotos:[],date:new Date().toLocaleDateString('he-IL')};
   recipes.unshift(r);save();closeModal('addModal');render();toast(`🎉 "${name}" נשמר!`);
 }
 
@@ -1040,7 +1110,7 @@ function openAdd(tab){
   curTab=tab||'link';
   document.getElementById('addModal').classList.add('open');
   ['urlIn','nameIn','notesIn','ingIn','stepsIn','timeIn','servIn','friendIn','rawText','resName','resTime','resServ','resUrl','resUrlV','captionIn'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  selAu='';selCat='';pendThumb='';selLang='auto';pdfData=null;
+  selAu='';selCat='';pendThumb='';pendImage='';selLang='auto';pdfData=null;
   document.getElementById('friendRow').style.display='none';
   document.getElementById('prevBox').classList.remove('show');
   document.getElementById('fetchLoad').classList.remove('show');
@@ -1052,6 +1122,8 @@ function openAdd(tab){
   document.querySelectorAll('.lang-btn').forEach((b,i)=>{b.classList.toggle('sel',i===0);});
   const eb=document.getElementById('extractBtn');if(eb)eb.disabled=false;
   clearPdf();
+  clearAddImage();
+  const bmTip=document.getElementById('bookmarkletTip');if(bmTip)bmTip.classList.remove('bm-open');
   switchTab(curTab);
 }
 function openTextModal(){openAdd('text');}
@@ -1069,7 +1141,7 @@ function saveFromLink(){
   if(!selAu){toast('❗ בחרי מי מוסיפה');return;}
   const vid=ytId(url);
   const thumb=vid?`https://i.ytimg.com/vi/${vid}/mqdefault.jpg`:(pendThumb||'');
-  const r={id:Date.now(),name,url,category:selCat,author:selAu,notes:document.getElementById('notesIn').value.trim(),ingredients:document.getElementById('ingIn').value.trim(),steps:document.getElementById('stepsIn').value.trim(),prepTime:document.getElementById('timeIn').value.trim(),servings:document.getElementById('servIn').value.trim(),thumb,image:'',ratings:[],cookedPhotos:[],date:new Date().toLocaleDateString('he-IL')};
+  const r={id:Date.now(),name,url,category:selCat,author:selAu,notes:document.getElementById('notesIn').value.trim(),ingredients:document.getElementById('ingIn').value.trim(),steps:document.getElementById('stepsIn').value.trim(),prepTime:document.getElementById('timeIn').value.trim(),servings:document.getElementById('servIn').value.trim(),thumb,image:pendImage||'',ratings:[],cookedPhotos:[],date:new Date().toLocaleDateString('he-IL')};
   recipes.unshift(r);save();closeModal('addModal');render();toast(`🎉 "${name}" נשמר!`);
 }
 
@@ -1366,39 +1438,20 @@ function saveEdit(){
 
 
 function showBookmarkletHelp(){
-  const bm = `javascript:(function(){var t='';var ss=['h1','[class*="caption"],[class*="Caption"]','article p','main'];for(var s of ss){var els=document.querySelectorAll(s);for(var el of els){var tx=el.innerText||el.textContent||'';if(tx.length>80&&tx.length<8000){t=tx.trim();break;}}if(t)break;}if(!t)t=(document.body.innerText||'').substring(0,4000);if(!t){alert('לא הצלחתי למצוא טקסט בדף');return;}var u='https://noamitrecipes.vercel.app/?caption='+encodeURIComponent(t);window.open(u,'_blank');})();`;
-  const ov = document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;background:rgba(44,36,22,.8);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
-  ov.innerHTML=`
-    <div style="background:var(--warm);border-radius:20px;padding:28px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)">
-      <h3 style="font-family:Playfair Display,serif;font-size:20px;color:var(--dark);margin-bottom:8px;text-align:center">📌 קיצור דרך לאינסטגרם</h3>
-      <p style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:20px;line-height:1.6">גרירת הכפתור הזה לסרגל הסימניות — ואז לחיצה עליו בכל פוסט אינסטגרם תפתח את האתר עם הטקסט אוטומטית!</p>
-      
-      <div style="text-align:center;margin-bottom:20px">
-        <a href="${bm}" 
-           style="display:inline-block;background:linear-gradient(135deg,var(--terra),var(--mustard));color:#fff;text-decoration:none;border-radius:50px;padding:14px 28px;font-family:Heebo,sans-serif;font-size:15px;font-weight:700;box-shadow:0 4px 16px rgba(201,96,58,.4)"
-           onclick="event.preventDefault();alert('גרירי אותי לסרגל הסימניות! אל תלחצי עלי כאן.')">
-          🍳 שלוף מתכון
-        </a>
-        <p style="font-size:11px;color:var(--muted);margin-top:8px">← גרירי את הכפתור הזה לסרגל הסימניות</p>
-      </div>
-
-      <div style="background:var(--cream);border-radius:12px;padding:14px;font-size:12px;color:var(--brown);line-height:1.8">
-        <strong>איך משתמשים:</strong><br>
-        1. גרירי את הכפתור לסרגל הסימניות<br>
-        2. פתחי פוסט מתכון באינסטגרם<br>
-        3. לחצי על הסימנייה "🍳 שלוף מתכון"<br>
-        4. האתר ייפתח עם הטקסט אוטומטית! ✨
-      </div>
-
-      <button onclick="this.closest('div[style*=fixed]').remove()" 
-        style="width:100%;margin-top:16px;background:none;border:1.5px solid var(--border);color:var(--muted);border-radius:12px;padding:11px;font-family:Heebo,sans-serif;font-size:14px;cursor:pointer">
-        סגרי
-      </button>
-    </div>`;
-  document.body.appendChild(ov);
-  ov.addEventListener('click',e=>{ if(e.target===ov)ov.remove(); });
+  openAdd('link');
+  setTimeout(()=>{
+    const tip = document.getElementById('bookmarkletTip');
+    if(tip) tip.classList.add('bm-open');
+    tip.scrollIntoView({behavior:'smooth',block:'center'});
+  },300);
 }
+
+// Set bookmarklet href safely via JS (avoid HTML escaping issues)
+(function setBookmarkletHref(){
+  var bm = "javascript:(function(){var t='';var ss=['h1','[class*=\"caption\"],[class*=\"Caption\"]','article p','main'];for(var s of ss){var els=document.querySelectorAll(s);for(var el of els){var tx=el.innerText||el.textContent||'';if(tx.length>80&&tx.length<8000){t=tx.trim();break;}}if(t)break;}if(!t)t=(document.body.innerText||'').substring(0,4000);if(!t){alert('\\u05DC\\u05D0 \\u05D4\\u05E6\\u05DC\\u05D7\\u05EA\\u05D9');return;}var u='https://noamitrecipes.vercel.app/?caption='+encodeURIComponent(t);window.open(u,'_blank');})();";
+  var el = document.getElementById('bookmarkletBtn');
+  if(el) el.href = bm;
+})();
 
 
 // ── EDIT RECIPE ──
@@ -1727,6 +1780,6 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
   if(changed){save();render();}
 })();
 </script>
-<div class="version-badge">🍳 v1.2 — 26.3.2026</div>
+<div class="version-badge">🍳 v1.3 — 17.4.2026</div>
 </body>
 </html>
