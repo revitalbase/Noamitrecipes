@@ -69,18 +69,13 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;}
 
 /* ── HOME SECTIONS ── */
-.home-section{margin-bottom:36px;}
-.section-hdr{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid var(--border);}
-.section-icon{font-size:24px;line-height:1;}
-.section-title{font-family:'Playfair Display',serif;font-size:20px;color:var(--dark);}
-.section-count{font-size:12px;color:var(--muted);background:var(--cream);border:1px solid var(--border);border-radius:50px;padding:2px 10px;margin-right:auto;}
+.home-section{margin-bottom:44px;}
+.section-hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;}
+.section-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--dark);font-weight:700;}
+.section-link{font-size:13px;color:var(--terra);font-weight:600;cursor:pointer;transition:.2s;text-decoration:none;display:flex;align-items:center;gap:4px;}
+.section-link:hover{color:var(--terra-l);}
+.section-divider{height:2px;background:linear-gradient(to left,var(--terra),var(--border),transparent);margin-bottom:22px;border:none;}
 .section-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;}
-
-/* horizontal scroll variant for "new" section */
-.section-scroll{display:flex;gap:18px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
-.section-scroll::-webkit-scrollbar{height:6px;}
-.section-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
-.section-scroll .card{min-width:280px;max-width:320px;flex-shrink:0;scroll-snap-align:start;}
 
 /* ── CARD ── */
 .card{background:var(--warm);border-radius:18px;overflow:hidden;border:1px solid var(--border);box-shadow:0 2px 12px var(--shadow);cursor:pointer;transition:.25s;animation:up .4s ease both;display:flex;flex-direction:column;}
@@ -1285,16 +1280,16 @@ function renderCard(r, ri){
     </div>`;
 }
 
-function makeSection(icon, title, items, useScroll){
+function makeSection(title, items, linkText, linkAction){
   if(!items.length) return '';
   return `
   <div class="home-section">
     <div class="section-hdr">
-      <span class="section-icon">${icon}</span>
       <span class="section-title">${title}</span>
-      <span class="section-count">${items.length}</span>
+      ${linkText?`<a class="section-link" onclick="${linkAction||''}">${linkText} ←</a>`:''}
     </div>
-    <div class="${useScroll?'section-scroll':'section-grid'}">
+    <hr class="section-divider">
+    <div class="section-grid">
       ${items.map((r,i)=>renderCard(r,i)).join('')}
     </div>
   </div>`;
@@ -1312,7 +1307,7 @@ function render(){
     renderStats();return;
   }
 
-  // Filtered / searched → flat grid (no sections)
+  // Filtered / searched → flat grid
   if(curCat!=='all' || curQ){
     g.innerHTML=`<div class="section-grid">${list.map((r,i)=>renderCard(r,i)).join('')}</div>`;
     renderStats();return;
@@ -1323,7 +1318,7 @@ function render(){
   const newOnes = list.slice(0, 6);
   const newIds = new Set(newOnes.map(r=>r.id));
 
-  // 2. Recommended = tried + has ratings, sorted by avg rating desc (exclude already in "new")
+  // 2. Recommended = tried + has ratings, sorted by avg rating desc
   const recommended = list
     .filter(r=> !newIds.has(r.id) && r.tried===true && (r.ratings||[]).length>0)
     .sort((a,b)=>(avgR(b)||0)-(avgR(a)||0));
@@ -1333,9 +1328,9 @@ function render(){
   const rest = list.filter(r=> !newIds.has(r.id) && !recIds.has(r.id));
 
   let html = '';
-  html += makeSection('🆕','מתכונים חדשים', newOnes, true);
-  html += makeSection('⭐','המומלצים שלנו', recommended, false);
-  html += makeSection('🍽️','עוד מתכונים', rest, false);
+  html += makeSection('מתכונים חדשים', newOnes);
+  html += makeSection('המומלצים שלנו', recommended);
+  html += makeSection('עוד מתכונים', rest);
 
   g.innerHTML = html;
   renderStats();
