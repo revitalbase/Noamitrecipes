@@ -66,7 +66,7 @@ body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--text);mi
 .stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:26px;}
 .stat{background:var(--warm);border:1px solid var(--border);border-radius:12px;padding:8px 16px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;}
 .stat strong{color:var(--dark);font-size:16px;font-weight:700;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;}
+.grid{display:block;}
 
 /* ── HOME SECTIONS ── */
 .home-section{margin-bottom:52px;padding-bottom:10px;grid-column:1/-1;}
@@ -686,92 +686,74 @@ async function initSupabase(){
   return _sbInitPromise;
 }
 
-function save(){
+async function save(){
   if(!recipes || recipes.length === 0){
     console.warn('🛡️ save() blocked — empty');
     return;
   }
-  const fullJson = JSON.stringify(recipes);
 
-  // 1. Save to localStorage — try full first, strip images if too large
-  try{
-    localStorage.setItem(DB_KEY, fullJson);
-  }catch(e){
-    // localStorage full — try without base64 images
-    console.warn('⚠️ localStorage full, stripping images...');
-    try{
-      const lightLocal = recipes.map(r=>{
-        const c = Object.assign({}, r);
-        if(c.image && c.image.startsWith('data:')) c.image = '__local_lost__';
-        if(c.cookedPhotos) c.cookedPhotos = c.cookedPhotos.map(p=>
-          (p.data && p.data.startsWith('data:')) ? Object.assign({},p,{data:''}) : p
-        );
-        return c;
-      });
-      localStorage.setItem(DB_KEY, JSON.stringify(lightLocal));
-      console.log('✅ Saved to localStorage (without images)');
-    }catch(e2){
-      console.error('❌ localStorage completely failed:', e2);
-      toast('⚠️ אחסון מקומי מלא — גבי ידנית!');
+  // 1. Compress any large base64 images IN PLACE before saving
+  for(const r of recipes){
+    if(r.image && r.image.startsWith('data:') && r.image.length > 80000){
+      try{ r.image = await compressImage(r.image, 400, 0.5); }catch(e){}
+    }
+    if(r.cookedPhotos){
+      for(let i=0;i<r.cookedPhotos.length;i++){
+        const p = r.cookedPhotos[i];
+        if(p.data && p.data.startsWith('data:') && p.data.length > 80000){
+          try{ r.cookedPhotos[i].data = await compressImage(p.data, 400, 0.5); }catch(e){}
+        }
+      }
     }
   }
 
-  // 2. Build light version for cloud (strip base64 images)
-  const light = recipes.map(r=>{
-    const c = Object.assign({}, r);
-    if(c.image && c.image.startsWith('data:')) c.image = '__local__';
-    if(c.cookedPhotos && c.cookedPhotos.length){
-      c.cookedPhotos = c.cookedPhotos.map(p=>
-        (p.data && p.data.startsWith('data:'))
-          ? Object.assign({}, p, {data:'__local__'})
-          : p
-      );
-    }
-    return c;
-  });
-  const cloudJson = JSON.stringify(light);
+  const json = JSON.stringify(recipes);
+  const sizeKB = (json.length/1024).toFixed(0);
 
-  // 3. Save to Supabase with verification
-  initSupabase().then(async sb=>{
-    if(!sb){ console.log('⚠️ No Supabase connection'); return; }
-    const sizeKB = (cloudJson.length/1024).toFixed(0);
+  // 2. Save to localStorage
+  try{
+    localStorage.setItem(DB_KEY, json);
+  }catch(e){
+    console.warn('⚠️ localStorage full');
+    toast('⚠️ אחסון מקומי מלא — גבי ידנית!');
+  }
+
+  // 3. Save to Supabase — WITH images (they're compressed now)
+  try{
+    const sb = await initSupabase();
+    if(!sb){ console.log('⚠️ No Supabase'); return; }
     console.log(`💾 Saving ${recipes.length} recipes (${sizeKB}KB)...`);
 
-    // Try save
     const {error} = await sb.from('recipes')
-      .upsert({id:'shared', data:cloudJson, updated_at: new Date().toISOString()}, {onConflict:'id'});
+      .upsert({id:'shared', data:json, updated_at: new Date().toISOString()}, {onConflict:'id'});
 
     if(error){
       console.error('❌ Save error:', error.message || error);
-      // Retry once with update instead of upsert
-      console.log('🔄 Retrying with update...');
+      // Retry
       const {error:e2} = await sb.from('recipes')
-        .update({data:cloudJson, updated_at: new Date().toISOString()})
+        .update({data:json, updated_at: new Date().toISOString()})
         .eq('id','shared');
       if(e2){
-        console.error('❌ Retry failed:', e2.message || e2);
+        console.error('❌ Retry failed:', e2);
         toast('⚠️ שמירה לענן נכשלה! גבי ידנית (💾)');
         return;
       }
     }
 
-    // 4. Verify — read back and check count
-    try{
-      const {data:check} = await sb.from('recipes').select('data').eq('id','shared').single();
-      if(check && check.data){
-        const saved = JSON.parse(check.data);
-        if(Array.isArray(saved) && saved.length === recipes.length){
-          console.log(`✅ Verified! ${saved.length} recipes in cloud`);
-        } else {
-          console.warn(`⚠️ Mismatch: saved ${saved?.length}, expected ${recipes.length}`);
-          toast('⚠️ בעיית סנכרון — גבי ידנית (💾)');
-        }
+    // Verify
+    const {data:check} = await sb.from('recipes').select('data').eq('id','shared').single();
+    if(check && check.data){
+      const saved = JSON.parse(check.data);
+      if(Array.isArray(saved) && saved.length === recipes.length){
+        console.log(`✅ Verified! ${saved.length} recipes (${sizeKB}KB)`);
+      } else {
+        console.warn(`⚠️ Count mismatch: ${saved?.length} vs ${recipes.length}`);
       }
-    }catch(ve){ console.log('Verify read error:', ve); }
-  }).catch(e=>{
-    console.error('Save chain error:', e);
+    }
+  }catch(e){
+    console.error('Save error:', e);
     toast('⚠️ שמירה לענן נכשלה!');
-  });
+  }
 }
 
 async function loadRecipes(){
@@ -796,52 +778,26 @@ async function loadRecipes(){
     if(local){ const p=JSON.parse(local); if(Array.isArray(p)) localData = p; }
   }catch(e){}
 
-  // 3. Decide which source to use
+  // 3. Use whichever has MORE recipes
   let result = null;
-
   if(cloudData && localData){
-    // Use whichever has MORE recipes
     if(localData.length > cloudData.length){
-      console.log(`📱 Using localStorage (${localData.length}) > cloud (${cloudData.length})`);
+      console.log(`📱 localStorage (${localData.length}) > cloud (${cloudData.length}) — using local`);
       result = localData;
+      // Sync to cloud
+      setTimeout(()=>save(), 1000);
     } else {
-      console.log(`☁️ Using cloud (${cloudData.length})`);
+      console.log(`☁️ cloud (${cloudData.length}) — using cloud`);
       result = cloudData;
+      try{ localStorage.setItem(DB_KEY, JSON.stringify(cloudData)); }catch(e){}
     }
   } else if(cloudData){
     result = cloudData;
+    try{ localStorage.setItem(DB_KEY, JSON.stringify(cloudData)); }catch(e){}
   } else if(localData){
     result = localData;
   } else {
     return [];
-  }
-
-  // 4. Merge: restore local images into cloud recipes
-  if(localData && result === cloudData){
-    const localMap = {};
-    localData.forEach(r=>{ localMap[r.id] = r; });
-    result.forEach(r=>{
-      const lr = localMap[r.id];
-      if(!lr) return;
-      // Restore base64 images that were stripped for cloud
-      if(r.image === '__local__' && lr.image && lr.image.startsWith('data:')) r.image = lr.image;
-      if(r.cookedPhotos && lr.cookedPhotos){
-        r.cookedPhotos.forEach((p,i)=>{
-          if(p.data === '__local__' && lr.cookedPhotos[i] && lr.cookedPhotos[i].data.startsWith('data:'))
-            p.data = lr.cookedPhotos[i].data;
-        });
-      }
-    });
-  }
-
-  // 5. Update localStorage with merged result
-  try{ localStorage.setItem(DB_KEY, JSON.stringify(result)); }catch(e){}
-
-  // 6. If we used local data because cloud was behind, try to sync cloud now
-  if(result === localData && cloudData && localData.length > cloudData.length){
-    console.log('🔄 Syncing local → cloud...');
-    // Re-save will strip images and push to cloud
-    setTimeout(()=>save(), 500);
   }
 
   return result;
@@ -936,7 +892,7 @@ function handleAddImage(e){
   if(f.size>10*1024*1024){toast('❗ תמונה גדולה מדי (עד 10MB)');return;}
   const rd=new FileReader();
   rd.onload=async ev=>{
-    pendImage=await compressImage(ev.target.result, 800, 0.7);
+    pendImage=await compressImage(ev.target.result, 400, 0.5);
     document.getElementById('imgPreviewSrc').src=pendImage;
     document.getElementById('imgUploadEmpty').style.display='none';
     document.getElementById('imgUploadPreview').style.display='block';
@@ -1410,8 +1366,8 @@ function render(){
   const rest = list.filter(r=> !usedIds.has(r.id));
 
   let html = '';
-  html += makeSection('המומלצים שלנו', 'המתכונים שניסינו — לפי דירוג כוכבים ⭐', recommended);
   html += makeSection('חדשים שלנו', '6 המתכונים האחרונים שעלו 🆕', newOnes);
+  html += makeSection('המומלצים שלנו', 'המתכונים שניסינו — לפי דירוג כוכבים ⭐', recommended);
   html += makeSection('כל המתכונים', 'כל שאר המתכונים 🍽️', rest);
 
   g.innerHTML = html;
@@ -1529,13 +1485,13 @@ function importRecipes(e){
       // Compress any large base64 images to prevent storage issues
       for(const r of recipes){
         if(r.image && r.image.startsWith('data:') && r.image.length > 100000){
-          try{ r.image = await compressImage(r.image, 600, 0.6); }catch(e){}
+          try{ r.image = await compressImage(r.image, 400, 0.5); }catch(e){}
         }
         if(r.cookedPhotos){
           for(let i=0;i<r.cookedPhotos.length;i++){
             const p = r.cookedPhotos[i];
             if(p.data && p.data.startsWith('data:') && p.data.length > 100000){
-              try{ r.cookedPhotos[i].data = await compressImage(p.data, 600, 0.6); }catch(e){}
+              try{ r.cookedPhotos[i].data = await compressImage(p.data, 400, 0.5); }catch(e){}
             }
           }
         }
@@ -1889,8 +1845,8 @@ function saveRating(recipeId){
   recipes[idx].ratings.push({stars:tStars,author:rAu,note,date:new Date().toLocaleDateString('he-IL')});
   save();render();viewR(idx);toast('⭐ הדירוג נשמר!');
 }
-function changeThumb(e,idx){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=async ev=>{recipes[idx].image=await compressImage(ev.target.result,800,0.7);save();render();toast('✅ תמונה עודכנה!');};rd.readAsDataURL(f);}
-function addCooked(e,idx){const f=e.target.files[0];if(!f)return;const who=prompt('מי מעלה? (נעם / עמית / שם)')||'אנונימי';const rd=new FileReader();rd.onload=async ev=>{if(!recipes[idx].cookedPhotos)recipes[idx].cookedPhotos=[];recipes[idx].cookedPhotos.push({data:await compressImage(ev.target.result,800,0.7),author:who,date:new Date().toLocaleDateString('he-IL')});save();render();viewR(idx);toast('📸 תמונה נוספה!');};rd.readAsDataURL(f);}
+function changeThumb(e,idx){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=async ev=>{recipes[idx].image=await compressImage(ev.target.result,400,0.5);save();render();toast('✅ תמונה עודכנה!');};rd.readAsDataURL(f);}
+function addCooked(e,idx){const f=e.target.files[0];if(!f)return;const who=prompt('מי מעלה? (נעם / עמית / שם)')||'אנונימי';const rd=new FileReader();rd.onload=async ev=>{if(!recipes[idx].cookedPhotos)recipes[idx].cookedPhotos=[];recipes[idx].cookedPhotos.push({data:await compressImage(ev.target.result,400,0.5),author:who,date:new Date().toLocaleDateString('he-IL')});save();render();viewR(idx);toast('📸 תמונה נוספה!');};rd.readAsDataURL(f);}
 function markDone(idx){const cats=['קינוחים','אסיאתי','ראשונות','עיקריות','לחמים ומאפים','שתייה','מרקים','סלטים','ארוחת בוקר','ביס מהיר'];const c=prompt(`איזו קטגוריה?\n${cats.join(' / ')}`,'עיקריות')||'עיקריות';recipes[idx].category=c;save();render();toast(`🎉 עבר לקטגוריית "${c}"!`);}
 function delR(recipeId){
   const idx=recipes.findIndex(r=>r.id===recipeId);
