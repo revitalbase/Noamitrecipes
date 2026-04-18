@@ -692,15 +692,21 @@ async function save(){
     return;
   }
 
-  // 1. Compress any large base64 images IN PLACE before saving
+  // 1. Compress ALL base64 images IN PLACE — thumb, image, cookedPhotos
   for(const r of recipes){
-    if(r.image && r.image.startsWith('data:') && r.image.length > 80000){
+    // Compress thumb (many are huge base64 instead of URLs!)
+    if(r.thumb && r.thumb.startsWith('data:') && r.thumb.length > 30000){
+      try{ r.thumb = await compressImage(r.thumb, 200, 0.4); }catch(e){}
+    }
+    // Compress main image
+    if(r.image && r.image.startsWith('data:') && r.image.length > 30000){
       try{ r.image = await compressImage(r.image, 400, 0.5); }catch(e){}
     }
+    // Compress cooked photos
     if(r.cookedPhotos){
       for(let i=0;i<r.cookedPhotos.length;i++){
         const p = r.cookedPhotos[i];
-        if(p.data && p.data.startsWith('data:') && p.data.length > 80000){
+        if(p.data && p.data.startsWith('data:') && p.data.length > 30000){
           try{ r.cookedPhotos[i].data = await compressImage(p.data, 400, 0.5); }catch(e){}
         }
       }
@@ -718,7 +724,7 @@ async function save(){
     toast('⚠️ אחסון מקומי מלא — גבי ידנית!');
   }
 
-  // 3. Save to Supabase — WITH images (they're compressed now)
+  // 3. Save to Supabase
   try{
     const sb = await initSupabase();
     if(!sb){ console.log('⚠️ No Supabase'); return; }
@@ -729,7 +735,6 @@ async function save(){
 
     if(error){
       console.error('❌ Save error:', error.message || error);
-      // Retry
       const {error:e2} = await sb.from('recipes')
         .update({data:json, updated_at: new Date().toISOString()})
         .eq('id','shared');
@@ -748,6 +753,7 @@ async function save(){
         console.log(`✅ Verified! ${saved.length} recipes (${sizeKB}KB)`);
       } else {
         console.warn(`⚠️ Count mismatch: ${saved?.length} vs ${recipes.length}`);
+        toast('⚠️ בעיית סנכרון — גבי ידנית');
       }
     }
   }catch(e){
@@ -1482,23 +1488,27 @@ function importRecipes(e){
         recipes = [...newOnes, ...recipes];
       }
 
-      // Compress any large base64 images to prevent storage issues
+      // Compress ALL large base64 images — thumb, image, cookedPhotos
+      toast('⏳ דוחסת תמונות... אנא המתיני');
       for(const r of recipes){
-        if(r.image && r.image.startsWith('data:') && r.image.length > 100000){
+        if(r.thumb && r.thumb.startsWith('data:') && r.thumb.length > 30000){
+          try{ r.thumb = await compressImage(r.thumb, 200, 0.4); }catch(e){}
+        }
+        if(r.image && r.image.startsWith('data:') && r.image.length > 30000){
           try{ r.image = await compressImage(r.image, 400, 0.5); }catch(e){}
         }
         if(r.cookedPhotos){
           for(let i=0;i<r.cookedPhotos.length;i++){
             const p = r.cookedPhotos[i];
-            if(p.data && p.data.startsWith('data:') && p.data.length > 100000){
+            if(p.data && p.data.startsWith('data:') && p.data.length > 30000){
               try{ r.cookedPhotos[i].data = await compressImage(p.data, 400, 0.5); }catch(e){}
             }
           }
         }
       }
 
-      save(); render();
-      toast(`✅ שוחזרו ${recipes.length} מתכונים — בודקת סנכרון ענן...`);
+      await save(); render();
+      toast(`✅ שוחזרו ${recipes.length} מתכונים + תמונות דחוסות!`);
     }catch(err){
       toast('❌ שגיאה בקריאת הקובץ — ודאי שזה קובץ JSON תקין');
     }
