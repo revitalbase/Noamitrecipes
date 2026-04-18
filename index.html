@@ -691,6 +691,12 @@ async function save(){
     console.warn('🛡️ save() blocked — empty');
     return;
   }
+  // Never overwrite cloud with only demo data
+  const allDemo = recipes.every(r=>r._meta);
+  if(allDemo){
+    console.warn('🛡️ save() blocked — all recipes are demo, not saving to cloud');
+    return;
+  }
 
   // 1. Compress ALL base64 images IN PLACE — thumb, image, cookedPhotos
   for(const r of recipes){
@@ -1936,9 +1942,35 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
   }
 
   // Fix old thumbs
+  // Fix old thumbs — but NEVER save if only demo data
   let thumbFixed=false;
   recipes.forEach(r=>{if(r.thumb&&r.thumb.includes('hqdefault')){r.thumb=r.thumb.replace('hqdefault','mqdefault');thumbFixed=true;}});
-  if(thumbFixed) save();
+  if(thumbFixed && recipes.length > 2) save();
+
+  // ── ONE-TIME IMAGE COMPRESSION — compress old uncompressed images so they fit in Supabase ──
+  if(recipes.length > 2){
+    let compressed = false;
+    for(const r of recipes){
+      if(r.thumb && r.thumb.startsWith('data:') && r.thumb.length > 30000){
+        try{ r.thumb = await compressImage(r.thumb, 200, 0.4); compressed=true; }catch(e){}
+      }
+      if(r.image && r.image.startsWith('data:') && r.image.length > 30000){
+        try{ r.image = await compressImage(r.image, 400, 0.5); compressed=true; }catch(e){}
+      }
+      if(r.cookedPhotos){
+        for(let i=0;i<r.cookedPhotos.length;i++){
+          const p=r.cookedPhotos[i];
+          if(p.data && p.data.startsWith('data:') && p.data.length > 30000){
+            try{ r.cookedPhotos[i].data = await compressImage(p.data, 400, 0.5); compressed=true; }catch(e){}
+          }
+        }
+      }
+    }
+    if(compressed){
+      console.log('🗜️ Compressed old images — syncing to cloud...');
+      await save();
+    }
+  }
 
   render();
 
@@ -1952,9 +1984,9 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
       if(res.ok){const d=await res.json();r.name=d.title||r.url;r.thumb='https://i.ytimg.com/vi/'+v+'/mqdefault.jpg';delete r._meta;changed=true;}
     }catch(e){}
   }
-  if(changed){save();render();}
+  if(changed && recipes.length > 2){save();render();}
 })();
 </script>
-<div class="version-badge">🍳 v1.3 — 17.4.2026</div>
+<div class="version-badge">🍳 v1.4 — 18.4.2026</div>
 </body>
 </html>
