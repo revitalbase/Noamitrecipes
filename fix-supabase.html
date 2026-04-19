@@ -2,8 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>תיקון Supabase — דחיפת מתכונים</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>תיקון Supabase</title>
 <style>
 body{font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px;background:#FDF6EC;color:#2C2416;}
 h1{font-size:22px;}
@@ -13,21 +12,19 @@ h1{font-size:22px;}
 .warn{color:orange;}
 button{background:#C9603A;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:16px;cursor:pointer;margin:8px 4px;}
 button:hover{opacity:.9;}
-input[type=file]{margin:12px 0;}
 </style>
 </head>
 <body>
-<h1>🔧 כלי תיקון — דחיפת מתכונים ל-Supabase</h1>
-<p>הכלי הזה דוחף ישירות ל-Supabase בלי לעבור דרך האפליקציה.</p>
+<h1>🔧 דחיפת מתכונים ל-Supabase</h1>
 
-<h3>שלב 1: בחרי את קובץ הגיבוי הדחוס</h3>
+<h3>1. בחרי קובץ גיבוי</h3>
 <input type="file" accept=".json" id="fileIn" />
 
-<h3>שלב 2: לחצי לדחוף</h3>
-<button onclick="pushToSupabase()">🚀 דחוף ל-Supabase</button>
-<button onclick="checkSupabase()">🔍 בדוק מה ב-Supabase</button>
+<h3>2. לחצי</h3>
+<button onclick="pushViaAPI()">🚀 דחוף ל-Supabase</button>
+<button onclick="checkViaAPI()">🔍 בדוק מה ב-Supabase</button>
 
-<div class="log" id="log">מחכה לפעולה...\n</div>
+<div class="log" id="log">מחכה...\n</div>
 
 <script>
 const log = (msg, cls) => {
@@ -39,120 +36,60 @@ const log = (msg, cls) => {
   el.scrollTop = el.scrollHeight;
 };
 
-let sb = null;
-
-async function initSB(){
-  if(sb) return sb;
-  log('מתחבר ל-Supabase...');
+async function checkViaAPI(){
+  log('\n--- בודק Supabase ---');
   try{
-    const res = await fetch('https://noamitrecipes.vercel.app/api/config');
+    const res = await fetch('/api/config');
     const cfg = await res.json();
     log('URL: ' + cfg.supabaseUrl);
-    if(!cfg.supabaseUrl || !cfg.supabaseKey){
-      log('❌ חסרים credentials!', 'err');
-      return null;
+    const r2 = await fetch(
+      cfg.supabaseUrl + '/rest/v1/recipes?id=eq.shared&select=data',
+      { headers: { 'apikey': cfg.supabaseKey, 'Authorization': 'Bearer ' + cfg.supabaseKey } }
+    );
+    const d = await r2.json();
+    if(d && d[0] && d[0].data){
+      const recipes = JSON.parse(d[0].data);
+      log('✅ ' + recipes.length + ' מתכונים בענן', 'ok');
+      log('📦 ' + (d[0].data.length/1024).toFixed(0) + 'KB');
+      recipes.slice(0,3).forEach(r => log('   • ' + (r.name || '?')));
+    } else {
+      log('⚠️ אין נתונים', 'warn');
     }
-    sb = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, {auth:{persistSession:false}});
-    log('✅ מחובר!', 'ok');
-    return sb;
   }catch(e){
-    log('❌ שגיאת חיבור: ' + e.message, 'err');
-    return null;
+    log('❌ ' + e.message, 'err');
   }
 }
 
-async function checkSupabase(){
-  const client = await initSB();
-  if(!client) return;
-  log('\n--- בודק מה ב-Supabase ---');
-  try{
-    const {data, error} = await client.from('recipes').select('data, updated_at').eq('id','shared').single();
-    if(error){
-      log('❌ שגיאת קריאה: ' + JSON.stringify(error), 'err');
-      return;
-    }
-    if(!data || !data.data){
-      log('⚠️ אין נתונים ב-Supabase!', 'warn');
-      return;
-    }
-    const recipes = JSON.parse(data.data);
-    log('✅ נמצאו ' + recipes.length + ' מתכונים', 'ok');
-    log('📅 עודכן: ' + data.updated_at);
-    log('📦 גודל: ' + (data.data.length/1024).toFixed(0) + 'KB');
-    // Show first 3 recipe names
-    recipes.slice(0,5).forEach(r => log('   • ' + (r.name || '(ללא שם)')));
-    if(recipes.length > 5) log('   ... ועוד ' + (recipes.length-5));
-  }catch(e){
-    log('❌ שגיאה: ' + e.message, 'err');
-  }
-}
-
-async function pushToSupabase(){
+async function pushViaAPI(){
   const fileIn = document.getElementById('fileIn');
   if(!fileIn.files[0]){
-    log('❌ בחרי קובץ JSON קודם!', 'err');
+    log('❌ בחרי קובץ!', 'err');
     return;
   }
-
-  const client = await initSB();
-  if(!client) return;
-
   log('\n--- קורא קובץ ---');
   const text = await fileIn.files[0].text();
   const recipes = JSON.parse(text);
-  log('✅ נקראו ' + recipes.length + ' מתכונים');
-  log('📦 גודל: ' + (text.length/1024).toFixed(0) + 'KB (' + (text.length/1024/1024).toFixed(1) + 'MB)');
-
-  if(recipes.length < 3){
-    log('❌ פחות מ-3 מתכונים — נראה כמו דמו, ביטול!', 'err');
-    return;
-  }
-
-  // Count images
-  let imgCount = 0;
-  recipes.forEach(r => {
-    if(r.image && r.image.startsWith('data:')) imgCount++;
-    if(r.thumb && r.thumb.startsWith('data:')) imgCount++;
-    (r.cookedPhotos||[]).forEach(p => { if(p.data && p.data.startsWith('data:')) imgCount++; });
-  });
-  log('📸 ' + imgCount + ' תמונות base64');
-
-  // Push
-  log('\n--- דוחף ל-Supabase ---');
+  log('✅ ' + recipes.length + ' מתכונים', 'ok');
+  log('📦 ' + (text.length/1024).toFixed(0) + 'KB');
+  log('\n--- שולח דרך API שרתי ---');
   try{
-    const {error} = await client.from('recipes')
-      .upsert({id:'shared', data:text, updated_at: new Date().toISOString()}, {onConflict:'id'});
-    
-    if(error){
-      log('❌ upsert נכשל: ' + JSON.stringify(error), 'err');
-      log('🔄 מנסה update...', 'warn');
-      const {error:e2} = await client.from('recipes')
-        .update({data:text, updated_at: new Date().toISOString()})
-        .eq('id','shared');
-      if(e2){
-        log('❌ גם update נכשל: ' + JSON.stringify(e2), 'err');
-        return;
-      }
-      log('✅ update הצליח!', 'ok');
+    const res = await fetch('/api/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: text })
+    });
+    const result = await res.json();
+    if(result.success){
+      log('✅ הצלחה!', 'ok');
+      log('📤 נשלחו: ' + result.sent, 'ok');
+      log('✅ אומת: ' + result.verified + ' בענן', 'ok');
+      log('\n🎉 עכשיו פתחי מהמובייל!', 'ok');
     } else {
-      log('✅ upsert הצליח!', 'ok');
-    }
-
-    // Verify
-    log('\n--- מוודא ---');
-    const {data:check} = await client.from('recipes').select('data').eq('id','shared').single();
-    if(check && check.data){
-      const saved = JSON.parse(check.data);
-      log('✅ אומת: ' + saved.length + ' מתכונים ב-Supabase!', 'ok');
-      log('📦 גודל בענן: ' + (check.data.length/1024).toFixed(0) + 'KB');
-      if(saved.length === recipes.length){
-        log('\n🎉 הצלחה מלאה! עכשיו תפתחי את האתר מהמובייל', 'ok');
-      } else {
-        log('⚠️ אי-התאמה: שלחנו ' + recipes.length + ' אבל יש ' + saved.length, 'warn');
-      }
+      log('❌ ' + (result.error || 'שגיאה'), 'err');
+      if(result.details) log(result.details, 'err');
     }
   }catch(e){
-    log('❌ שגיאה: ' + e.message, 'err');
+    log('❌ ' + e.message, 'err');
   }
 }
 </script>

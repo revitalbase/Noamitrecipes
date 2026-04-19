@@ -4,6 +4,7 @@
     { "src": "/api/claude", "dest": "/api/claude.js" },
     { "src": "/api/config", "dest": "/api/config.js" },
     { "src": "/api/scrape", "dest": "/api/scrape.js" },
+    { "src": "/api/push", "dest": "/api/push.js" },
     { "src": "/fix-supabase.html", "dest": "/fix-supabase.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
